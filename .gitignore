@@ -176,3 +176,5 @@ dist
 
 # Build output
 /build/index.js
+
+/logs_*

@@ -98,4 +98,4 @@ class WarlockEnv(gym.Env):
             self._game.close()
             self._game = None
 
-        return state_to_obs(old_state), reward, terminated, False, {}
+        return state_to_obs(new_state), reward, terminated, False, {}
