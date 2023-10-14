@@ -1,10 +1,10 @@
-from ray.rllib.algorithms.sac import SACConfig
+from ray.rllib.algorithms.ppo import PPOConfig
 from ray.tune.logger import pretty_print
 
 from warlock_rl.envs import WarlockEnv
 
 algo = (
-    SACConfig()
+    PPOConfig()
     .rollouts(num_rollout_workers=4, num_envs_per_worker=16)
     .resources(num_gpus=1)
     .environment(env=WarlockEnv)
