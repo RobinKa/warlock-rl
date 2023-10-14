@@ -1,0 +1,31 @@
+[tool.poetry]
+name = "warlock-rl"
+version = "0.1.0"
+description = ""
+authors = ["Robin Kahlow <tora@warlock.ai>"]
+readme = "README.md"
+packages = [{include = "warlock_rl"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+torch = "^2.1.0"
+gymnasium = "^0.28.1"
+stable-baselines3 = "^2.1.0"
+nvidia-cublas-cu12 = "^12.2.5.6"
+nvidia-cudnn-cu12 = "^8.9.4.25"
+nvidia-cuda-runtime-cu12 = "^12.2.140"
+nvidia-cuda-cupti-cu12 = "^12.2.142"
+nvidia-cufft-cu12 = "^11.0.8.103"
+nvidia-cusparse-cu12 = "^12.1.2.141"
+nvidia-nccl-cu12 = "^2.18.3"
+ray = {extras = ["rllib"], version = "^2.7.1"}
+ujson = "^5.8.0"
+
+
+[tool.poetry.group.dev.dependencies]
+tensorboard = "^2.14.1"
+gputil = "^1.4.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
