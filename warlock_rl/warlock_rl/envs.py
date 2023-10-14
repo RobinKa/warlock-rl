@@ -86,7 +86,7 @@ class WarlockEnv(gym.Env):
         reward = (
             (old_state["healths"]["1001"]["current"] - new_state["healths"]["1001"]["current"]) +
             (new_state["healths"]["1000"]["current"] - old_state["healths"]["1000"]["current"])
-        ) / 100
+        ) / 100 - 0.01
 
         terminated = (
             new_state["gameState"]["deltaTime"] * new_state["gameState"]["frameNumber"] > 30 or
