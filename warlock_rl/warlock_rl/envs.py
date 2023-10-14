@@ -6,6 +6,7 @@ import numpy as np
 from warlock_rl.game import Game
 
 OBS_LOC_SCALE = 2_000
+MAX_TIME = 30
 
 def state_to_obs(state: dict) -> np.ndarray:
     self_health = state["healths"]["1000"]["current"]
@@ -14,6 +15,7 @@ def state_to_obs(state: dict) -> np.ndarray:
     self_y = state["bodies"]["1000"]["location"]["e2"]
     other_x = state["bodies"]["1001"]["location"]["e1"]
     other_y = state["bodies"]["1001"]["location"]["e2"]
+    elapsed_time = state["gameState"]["deltaTime"] * state["gameState"]["frameNumber"]
 
     return np.clip(np.array(
         [
@@ -23,6 +25,7 @@ def state_to_obs(state: dict) -> np.ndarray:
             self_y / OBS_LOC_SCALE + 0.5,
             other_x / OBS_LOC_SCALE + 0.5,
             other_y / OBS_LOC_SCALE + 0.5,
+            elapsed_time / MAX_TIME,
         ], np.float32
     ), 0, 1)
 
@@ -66,7 +69,8 @@ class WarlockEnv(gym.Env):
         # 3: Self y
         # 4: Other x
         # 5: Other y
-        self.observation_space = gym.spaces.Box(0, 1, (6,))
+        # 6: Time
+        self.observation_space = gym.spaces.Box(0, 1, (7,))
 
 
     def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None) -> tuple[Any, dict[str, Any]]:
@@ -89,7 +93,7 @@ class WarlockEnv(gym.Env):
         ) / 100 - 0.01
 
         terminated = (
-            new_state["gameState"]["deltaTime"] * new_state["gameState"]["frameNumber"] > 30 or
+            new_state["gameState"]["deltaTime"] * new_state["gameState"]["frameNumber"] >= MAX_TIME or
             new_state["healths"]["1000"]["current"] == 0 or
             new_state["healths"]["1001"]["current"] == 0
         )
