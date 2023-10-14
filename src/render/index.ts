@@ -38,10 +38,10 @@ if (isReplay) {
   localPlayerId = 1000;
   enemyPlayerId = 1001;
 } else {
-  const { components: c, addPlayer } = makeGame({ deltaTime: 1 / 30 });
+  const { components: c, addPlayer } = makeGame({ deltaTime: 1 / 30, seed: 0 });
   components = c;
-  localPlayerId = addPlayer({ e1: 0, e2: 0 });
-  enemyPlayerId = addPlayer({ e1: 0, e2: 200 });
+  localPlayerId = addPlayer({ e1: 0, e2: 0 }, true);
+  enemyPlayerId = addPlayer({ e1: 0, e2: 200 }, false);
 }
 
 const app = new PIXI.Application({ background: "#7099bb", resizeTo: window });

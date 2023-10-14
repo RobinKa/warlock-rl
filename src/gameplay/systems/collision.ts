@@ -1,24 +1,13 @@
-import { EntityComponents } from "@/common/components";
 import * as pga from "@/common/ga_zpp";
 import { System } from "@/common/systems";
-import { BodyComponent } from "@/gameplay/components/body";
-import { HealthComponent } from "@/gameplay/components/health";
-import { LifetimeComponent } from "@/gameplay/components/lifetime";
-import { ProjectileComponent } from "@/gameplay/components/projectile";
+import { GameComponent } from "@/gameplay/components";
 
-export type CollisionSystemInputs = {
-  bodies: EntityComponents<BodyComponent>;
-  healths: EntityComponents<HealthComponent>;
-  projectiles: EntityComponents<ProjectileComponent>;
-  lifetimes: EntityComponents<LifetimeComponent>;
-};
-
-export const collisionSystem: System<CollisionSystemInputs> = ({
+export const collisionSystem: System<GameComponent> = ({
   bodies,
   projectiles,
   lifetimes,
   healths,
-}: CollisionSystemInputs) => {
+}: GameComponent) => {
   function handleCollision(idA: string, idB: string) {
     if (idA in projectiles) {
       lifetimes[idA] = { remainingFrames: 0 };
@@ -26,6 +15,14 @@ export const collisionSystem: System<CollisionSystemInputs> = ({
         healths[idB].current = Math.max(
           0,
           healths[idB].current - projectiles[idA].damage
+        );
+      }
+
+      // Conserve momentum
+      if (idA in bodies && idB in bodies) {
+        bodies[idB].velocity = pga.add(
+          bodies[idB].velocity,
+          pga.multiply(bodies[idA].velocity, 0.2) // TODO: Use mass
         );
       }
     }

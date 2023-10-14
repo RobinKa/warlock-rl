@@ -3,4 +3,5 @@ export type GameStateComponent = {
   deltaTime: number;
   moveSpeed: number; // TODO: Move
   nextEntityId: number;
+  randomState: number;
 };

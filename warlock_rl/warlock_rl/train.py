@@ -7,6 +7,10 @@ algo = (
     PPOConfig()
     .rollouts(num_rollout_workers=4, num_envs_per_worker=16)
     .resources(num_gpus=1)
+    .training(model={
+        # "use_lstm": True,
+        "fcnet_hiddens": [64, 64],
+    })
     .environment(env=WarlockEnv)
     .build()
 )

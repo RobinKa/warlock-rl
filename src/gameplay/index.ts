@@ -4,15 +4,17 @@ import { gameSystem } from "./systems";
 
 export type MakeGameOptions = {
   deltaTime: number;
+  seed: number;
 };
 
-export const makeGame = ({ deltaTime }: MakeGameOptions) => {
+export const makeGame = ({ deltaTime, seed }: MakeGameOptions) => {
   const components: GameComponent = {
     gameState: {
       deltaTime,
       frameNumber: 0,
       moveSpeed: 210,
       nextEntityId: 1_000,
+      randomState: seed,
     },
     arena: {
       radius: 32 * 20,
@@ -35,15 +37,43 @@ export const makeGame = ({ deltaTime }: MakeGameOptions) => {
     gameSystem(components);
   }
 
-  function addPlayer(location: pga.BladeE1 & pga.BladeE2): number {
+  function randomInt() {
+    let t = (components.gameState.randomState += 0x6d2b79f5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return (t ^ (t >>> 14)) >>> 0;
+  }
+
+  function randomRange(min: number, max: number) {
+    return min + (randomInt() % (max - min));
+  }
+
+  function randomFloat() {
+    return randomInt() / 4294967296;
+  }
+
+  function addPlayer(
+    location: pga.BladeE1 & pga.BladeE2,
+    withVelocity: boolean
+  ): number {
     const { gameState, bodies, healths, orders, playerOwneds, cooldowns } =
       components;
 
     const entityId = gameState.nextEntityId++;
 
+    location = {
+      e1: (randomFloat() - 0.5) * 500,
+      e2: (randomFloat() - 0.5) * 500,
+    };
+
     bodies[entityId] = {
       location: location,
-      velocity: { e1: 0, e2: 0 },
+      velocity: withVelocity
+        ? {
+            e1: (randomFloat() - 0.5) * 500,
+            e2: (randomFloat() - 0.5) * 500,
+          }
+        : { e1: 0, e2: 0 },
       force: { e1: 0, e2: 0 },
       radius: 30,
       dampening: 0.97,
@@ -60,7 +90,7 @@ export const makeGame = ({ deltaTime }: MakeGameOptions) => {
     };
 
     cooldowns[entityId] = {
-      shootCooldown: 3,
+      shootCooldown: 2,
     };
 
     return entityId;
@@ -70,5 +100,8 @@ export const makeGame = ({ deltaTime }: MakeGameOptions) => {
     components,
     step,
     addPlayer,
+    randomInt,
+    randomRange,
+    randomFloat,
   };
 };

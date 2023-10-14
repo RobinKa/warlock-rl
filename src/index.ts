@@ -1,10 +1,13 @@
 import { makeGame } from "@/gameplay";
 import { Order } from "@/gameplay/components/order";
 
-const { components, step, addPlayer } = makeGame({ deltaTime: 1 / 30 });
+const { components, step, addPlayer } = makeGame({
+  deltaTime: 1 / 30,
+  seed: Math.floor(1_000_000_000 * Math.random()),
+});
 
-let localPlayerId = addPlayer({ e1: -50, e2: 0 });
-let enemyPlayerId = addPlayer({ e1: 50, e2: 0 });
+let localPlayerId = addPlayer({ e1: -50, e2: 0 }, true);
+let enemyPlayerId = addPlayer({ e1: 50, e2: 0 }, false);
 
 components.bodies[localPlayerId].velocity.e1 = -500;
 
