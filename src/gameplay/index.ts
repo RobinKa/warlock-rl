@@ -28,6 +28,7 @@ export const makeGame = ({ deltaTime }: MakeGameOptions) => {
     playerOwneds: {},
     projectiles: {},
     orders: {},
+    cooldowns: {},
   };
 
   function step() {
@@ -35,7 +36,8 @@ export const makeGame = ({ deltaTime }: MakeGameOptions) => {
   }
 
   function addPlayer(location: pga.BladeE1 & pga.BladeE2): number {
-    const { gameState, bodies, healths, orders, playerOwneds } = components;
+    const { gameState, bodies, healths, orders, playerOwneds, cooldowns } =
+      components;
 
     const entityId = gameState.nextEntityId++;
 
@@ -55,6 +57,10 @@ export const makeGame = ({ deltaTime }: MakeGameOptions) => {
     orders[entityId] = {};
     playerOwneds[entityId] = {
       owningPlayerId: entityId,
+    };
+
+    cooldowns[entityId] = {
+      shootCooldown: 3,
     };
 
     return entityId;

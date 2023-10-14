@@ -7,11 +7,33 @@ export const shootSystem = ({
   lifetimes,
   projectiles,
   gameState,
+  cooldowns,
 }: GameComponent) => {
+  const elapsedTime = gameState.deltaTime * gameState.frameNumber;
+
   for (const [entityId, order] of Object.entries(orders)) {
-    if (order.order?.type === "shoot" && entityId in bodies) {
+    if (
+      order.order?.type === "shoot" &&
+      entityId in bodies &&
+      entityId in cooldowns
+    ) {
+      const { target } = order.order;
+      order.order = undefined;
+
+      // Check if shoot is ready
+      const cooldown = cooldowns[entityId];
+      if (
+        cooldown.lastShootFrame !== undefined &&
+        gameState.deltaTime * cooldown.lastShootFrame + cooldown.shootCooldown >
+          elapsedTime
+      ) {
+        continue;
+      }
+      cooldown.lastShootFrame = gameState.frameNumber;
+
+      // Spawn projectile
       const bodyLocation = bodies[entityId].location;
-      const bodyLocationToTarget = pga.sub(order.order.target, bodyLocation);
+      const bodyLocationToTarget = pga.sub(target, bodyLocation);
       const distance = Math.sqrt(
         pga.innerProduct(bodyLocationToTarget, bodyLocationToTarget).scalar
       );
@@ -35,8 +57,6 @@ export const shootSystem = ({
       projectiles[projectileEntityId] = {
         damage: 10,
       };
-
-      order.order = undefined;
     }
   }
 };

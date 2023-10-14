@@ -15,22 +15,34 @@ document.oncontextmenu = (e) => e.preventDefault();
 
 const clone = rfdc({ proto: false });
 
-let components: GameComponent = replay[0];
-let replayIndex = 0;
+const isReplay = true;
 
-function advanceReplay() {
-  replayIndex++;
-  if (replayIndex in replay) {
-    components = replay[replayIndex];
-  }
-  console.log("advanceReplay", replayIndex, replay.length);
+let components: GameComponent;
+let localPlayerId: number;
+let enemyPlayerId: number;
+let replayIndex: number;
+let advanceReplay: (() => void) | undefined;
+
+if (isReplay) {
+  replayIndex = 0;
+  components = replay[0] as GameComponent;
+
+  advanceReplay = () => {
+    replayIndex++;
+    if (replayIndex in replay) {
+      components = replay[replayIndex];
+    }
+    console.log("advanceReplay", replayIndex, replay.length);
+  };
+
+  localPlayerId = 1000;
+  enemyPlayerId = 1001;
+} else {
+  const { components: c, addPlayer } = makeGame({ deltaTime: 1 / 30 });
+  components = c;
+  localPlayerId = addPlayer({ e1: 0, e2: 0 });
+  enemyPlayerId = addPlayer({ e1: 0, e2: 200 });
 }
-const localPlayerId = 1000;
-const enemyPlayerId = 1001;
-
-// const { components, addPlayer } = makeGame({ deltaTime: 1 / 30 });
-// const localPlayerId = addPlayer({ e1: 0, e2: 0 });
-// const enemyPlayerId = addPlayer({ e1: 0, e2: 200 });
 
 const app = new PIXI.Application({ background: "#7099bb", resizeTo: window });
 // @ts-ignore
@@ -145,8 +157,11 @@ let nextDiffTime = app.ticker.lastTime;
 
 // Loop
 app.ticker.add((delta) => {
-  advanceReplay();
-  // gameSystem(components);
+  if (isReplay) {
+    advanceReplay!();
+  } else {
+    gameSystem(components);
+  }
   render();
 
   // Log debug info
