@@ -5,12 +5,13 @@ from warlock_rl.envs import WarlockEnv
 
 algo = (
     PPOConfig()
-    .rollouts(num_rollout_workers=4, num_envs_per_worker=16)
-    .resources(num_gpus=1)
-    .training(model={
-        # "use_lstm": True,
-        "fcnet_hiddens": [64, 64],
-    })
+    .rollouts(num_rollout_workers=24, num_envs_per_worker=2, batch_mode="complete_episodes")
+    .resources(num_gpus=1, num_cpus_per_worker=0.65)
+    .training(
+        model={
+            "fcnet_hiddens": [64, 64],
+        },
+    )
     .environment(env=WarlockEnv)
     .build()
 )

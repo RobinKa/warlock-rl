@@ -13,12 +13,23 @@ components.bodies[localPlayerId].velocity.e1 = -500;
 
 process.stdout.write(JSON.stringify(components));
 
-for await (const inputRaw of console) {
+let inputBuffer = "";
+for await (const inputRaw of Bun.stdin.stream()) {
+  inputBuffer += Buffer.from(inputRaw).toString();
+
+  const parts = inputBuffer.split("\n", 2);
+  if (parts.length < 2) {
+    continue;
+  }
+
+  const jsonRaw = parts[0];
+  inputBuffer = parts[1];
+
   let input: Order;
   try {
-    input = JSON.parse(inputRaw);
+    input = JSON.parse(jsonRaw);
   } catch {
-    throw new Error(`Failed fo parse json: ${inputRaw}`);
+    throw new Error(`Failed fo parse json: ${jsonRaw}`);
   }
 
   if (input) {

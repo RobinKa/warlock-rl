@@ -8,8 +8,6 @@ import ujson as json
 class Game:
     def __init__(self):
         self._game_id = str(uuid.uuid4())
-        self._game_log_dir = os.path.join("..", "logs", self._game_id)
-        os.makedirs(self._game_log_dir, exist_ok=True)
 
         print("Starting game", self._game_id)
         self._process = subprocess.Popen(
@@ -40,8 +38,8 @@ class Game:
         self._process.stdin.write(f"{line}\n".encode("utf-8"))
 
         # Do some non-action steps
-        for i in range(5):
-            self._process.stdout.read(128_000)
+        for _ in range(5):
+            self._read_state()
             self._process.stdin.write("null\n".encode("utf-8"))
 
         # Read new state
@@ -51,6 +49,13 @@ class Game:
         self._process.stdin.close()
         self._process.terminate()
         self._process.wait()
-        
-        with open(os.path.join(self._game_log_dir, "state_history.json"), "w", encoding="utf-8") as state_history_file:
+
+
+        game_log_dir = os.path.join("..", "logs", self._game_id)
+        os.makedirs(game_log_dir, exist_ok=True)
+        with open(
+            os.path.join(game_log_dir, "state_history.json"),
+            "w",
+            encoding="utf-8",
+        ) as state_history_file:
             json.dump(self._state_history, state_history_file)

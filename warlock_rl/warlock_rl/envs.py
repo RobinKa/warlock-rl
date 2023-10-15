@@ -8,6 +8,7 @@ from warlock_rl.game import Game
 OBS_LOC_SCALE = 2_000
 MAX_TIME = 30
 
+
 def state_to_obs(state: dict) -> np.ndarray:
     self_health = state["healths"]["1000"]["current"]
     other_health = state["healths"]["1001"]["current"]
@@ -17,17 +18,23 @@ def state_to_obs(state: dict) -> np.ndarray:
     other_y = state["bodies"]["1001"]["location"]["e2"]
     elapsed_time = state["gameState"]["deltaTime"] * state["gameState"]["frameNumber"]
 
-    return np.clip(np.array(
-        [
-            self_health / 100,
-            other_health / 100,
-            self_x / OBS_LOC_SCALE + 0.5,
-            self_y / OBS_LOC_SCALE + 0.5,
-            other_x / OBS_LOC_SCALE + 0.5,
-            other_y / OBS_LOC_SCALE + 0.5,
-            elapsed_time / MAX_TIME,
-        ], np.float32
-    ), 0, 1)
+    return np.clip(
+        np.array(
+            [
+                self_health / 100,
+                other_health / 100,
+                self_x / OBS_LOC_SCALE + 0.5,
+                self_y / OBS_LOC_SCALE + 0.5,
+                other_x / OBS_LOC_SCALE + 0.5,
+                other_y / OBS_LOC_SCALE + 0.5,
+                elapsed_time / MAX_TIME,
+            ],
+            np.float32,
+        ),
+        0,
+        1,
+    )
+
 
 def action_to_order(action: Sequence[float]) -> dict | None:
     action_type = np.argmax(action[:3])
@@ -49,6 +56,7 @@ def action_to_order(action: Sequence[float]) -> dict | None:
             }
 
     return None
+
 
 class WarlockEnv(gym.Env):
     _game: Game | None = None
@@ -72,15 +80,18 @@ class WarlockEnv(gym.Env):
         # 6: Time
         self.observation_space = gym.spaces.Box(0, 1, (7,))
 
-
-    def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None) -> tuple[Any, dict[str, Any]]:
+    def reset(
+        self, *, seed: int | None = None, options: dict[str, Any] | None = None
+    ) -> tuple[Any, dict[str, Any]]:
         super().reset(seed=seed, options=options)
         if self._game is not None:
             self._game.close()
         self._game = Game()
         return state_to_obs(self._game.state), {}
 
-    def step(self, action: Sequence[float]) -> tuple[Any, SupportsFloat, bool, bool, dict[str, Any]]:
+    def step(
+        self, action: Sequence[float]
+    ) -> tuple[Any, SupportsFloat, bool, bool, dict[str, Any]]:
         order = action_to_order(action)
 
         old_state = self._game.state
@@ -88,14 +99,21 @@ class WarlockEnv(gym.Env):
         new_state = self._game.state
 
         reward = (
-            (old_state["healths"]["1001"]["current"] - new_state["healths"]["1001"]["current"]) +
-            (new_state["healths"]["1000"]["current"] - old_state["healths"]["1000"]["current"])
+            (
+                old_state["healths"]["1001"]["current"]
+                - new_state["healths"]["1001"]["current"]
+            )
+            + (
+                new_state["healths"]["1000"]["current"]
+                - old_state["healths"]["1000"]["current"]
+            )
         ) / 100 - 0.01
 
         terminated = (
-            new_state["gameState"]["deltaTime"] * new_state["gameState"]["frameNumber"] >= MAX_TIME or
-            new_state["healths"]["1000"]["current"] == 0 or
-            new_state["healths"]["1001"]["current"] == 0
+            new_state["gameState"]["deltaTime"] * new_state["gameState"]["frameNumber"]
+            >= MAX_TIME
+            or new_state["healths"]["1000"]["current"] == 0
+            or new_state["healths"]["1001"]["current"] == 0
         )
 
         if terminated:
