@@ -37,21 +37,28 @@ def state_to_obs(state: dict) -> np.ndarray:
 
 
 def action_to_order(action: Sequence[float]) -> dict | None:
-    action_type = np.argmax(action[:3])
     target = {
-        "e1": OBS_LOC_SCALE * (action[3] - 0.5),
-        "e2": OBS_LOC_SCALE * (action[4] - 0.5),
+        "e1": OBS_LOC_SCALE * (action[0] - 0.5),
+        "e2": OBS_LOC_SCALE * (action[1] - 0.5),
     }
+    action_type = np.argmax(action[2:])
 
     match action_type:
+        case 0:
+            return {
+                "type": "move",
+                "target": target,
+            }
         case 1:
             return {
-                "type": "shoot",
+                "type": "useAbility",
+                "abilityId": "shoot",
                 "target": target,
             }
         case 2:
             return {
-                "type": "move",
+                "type": "useAbility",
+                "abilityId": "teleport",
                 "target": target,
             }
 
@@ -63,12 +70,13 @@ class WarlockEnv(gym.Env):
 
     def __init__(self, *args, **kwargs) -> None:
         # Actions:
-        # 0: Nothing
-        # 1: Shoot
-        # 2: Move
-        # 3: x
-        # 4: y
-        self.action_space = gym.spaces.Box(0, 1, (5,))
+        # 0: x
+        # 1: y
+        # 2: Nothing
+        # 3: Move
+        # 4: Shoot
+        # 5: Teleport
+        self.action_space = gym.spaces.Box(0, 1, (6,))
 
         # Observations:
         # 0: Self health

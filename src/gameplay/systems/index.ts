@@ -5,13 +5,13 @@ import { lavaSystem } from "./lava";
 import { lifetimeSystem } from "./lifetime";
 import { movementSystem } from "./movement";
 import { physicsSystem } from "./physics";
-import { shootSystem } from "./shoot";
+import { abilitySystem } from "./ability";
 
 export const gameSystem: System<GameComponent> = (
   components: GameComponent
 ) => {
   const systems: System<GameComponent>[] = [
-    shootSystem,
+    abilitySystem,
     movementSystem,
     physicsSystem,
     lavaSystem,

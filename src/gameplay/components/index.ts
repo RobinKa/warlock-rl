@@ -2,7 +2,7 @@ import { EntityComponents, SingletonComponent } from "@/common/components";
 import { ActionsComponent } from "./actions";
 import { ArenaComponent } from "./arena";
 import { BodyComponent } from "./body";
-import { CooldownComponent } from "./cooldown";
+import { AbilitiesComponent } from "./abilities";
 import { GameStateComponent } from "./gamestate";
 import { HealthComponent } from "./health";
 import { LifetimeComponent } from "./lifetime";
@@ -20,5 +20,5 @@ export type GameComponent = {
   projectiles: EntityComponents<ProjectileComponent>;
   orders: EntityComponents<OrderComponent>;
   arena: SingletonComponent<ArenaComponent>;
-  cooldowns: EntityComponents<CooldownComponent>;
+  abilities: EntityComponents<AbilitiesComponent>;
 };

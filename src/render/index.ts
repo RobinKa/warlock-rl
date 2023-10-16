@@ -6,9 +6,9 @@ import * as PIXI from "pixi.js";
 import { makeGame } from "@/gameplay";
 import { GameComponent } from "@/gameplay/components";
 import { gameSystem } from "@/gameplay/systems";
-import { diff } from "deep-object-diff";
 import rfdc from "rfdc";
 
+import { useKeyboard } from "@/common/keyboard";
 import replay from "./state_history.json";
 
 document.oncontextmenu = (e) => e.preventDefault();
@@ -68,9 +68,14 @@ background.on("click", (e) => {
 background.on("rightclick", (e) => {
   const { x, y } = worldStage.transform.worldTransform.applyInverse(e);
   components.orders[localPlayerId].order = {
-    type: "shoot",
+    type: "useAbility",
+    abilityId: "shoot",
     target: { e1: x, e2: y },
   };
+});
+let mousePosition = { x: 0, y: 0 };
+background.on("mousemove", ({ client }) => {
+  mousePosition = worldStage.transform.worldTransform.applyInverse(client);
 });
 app.stage.addChild(background);
 
@@ -91,6 +96,30 @@ const arena = {
 };
 arena.redraw();
 worldStage.addChild(arena.sprite);
+
+// Input
+const { keyStates, clearKeyStates } = useKeyboard(["1", "2"]);
+function handleInput() {
+  const { x, y } = mousePosition;
+
+  if (keyStates["1"]) {
+    console.log("Input 1");
+    components.orders[localPlayerId].order = {
+      type: "useAbility",
+      abilityId: "shoot",
+      target: { e1: x, e2: y },
+    };
+  } else if (keyStates["2"]) {
+    console.log("Input 2");
+    components.orders[localPlayerId].order = {
+      type: "useAbility",
+      abilityId: "teleport",
+      target: { e1: x, e2: y },
+    };
+  }
+
+  clearKeyStates();
+}
 
 // Rendering
 const bodyContainers: Record<string, PIXI.Container> = {};
@@ -152,25 +181,26 @@ function render() {
 }
 
 // Debugging
-let previousComponents: GameComponent = clone(components);
-let nextDiffTime = app.ticker.lastTime;
+// let previousComponents: GameComponent = clone(components);
+// let nextDiffTime = app.ticker.lastTime;
 
 // Loop
 app.ticker.add((delta) => {
   if (isReplay) {
     advanceReplay!();
   } else {
+    handleInput();
     gameSystem(components);
   }
   render();
 
   // Log debug info
-  if (app.ticker.lastTime >= nextDiffTime) {
-    nextDiffTime += 3000;
-    const componentsDiff = diff(previousComponents, components);
-    if (Object.keys(componentsDiff).length > 0) {
-      console.log("Diff: " + JSON.stringify(componentsDiff, undefined, 2));
-      previousComponents = clone(components);
-    }
-  }
+  // if (app.ticker.lastTime >= nextDiffTime) {
+  //   nextDiffTime += 3000;
+  //   const componentsDiff = diff(previousComponents, components);
+  //   if (Object.keys(componentsDiff).length > 0) {
+  //     console.log("Diff: " + JSON.stringify(componentsDiff, undefined, 2));
+  //     previousComponents = clone(components);
+  //   }
+  // }
 });

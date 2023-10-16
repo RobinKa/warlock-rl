@@ -30,7 +30,7 @@ export const makeGame = ({ deltaTime, seed }: MakeGameOptions) => {
     playerOwneds: {},
     projectiles: {},
     orders: {},
-    cooldowns: {},
+    abilities: {},
   };
 
   function step() {
@@ -56,7 +56,7 @@ export const makeGame = ({ deltaTime, seed }: MakeGameOptions) => {
     location: pga.BladeE1 & pga.BladeE2,
     withVelocity: boolean
   ): number {
-    const { gameState, bodies, healths, orders, playerOwneds, cooldowns } =
+    const { gameState, bodies, healths, orders, playerOwneds, abilities } =
       components;
 
     const entityId = gameState.nextEntityId++;
@@ -89,8 +89,17 @@ export const makeGame = ({ deltaTime, seed }: MakeGameOptions) => {
       owningPlayerId: entityId,
     };
 
-    cooldowns[entityId] = {
-      shootCooldown: 2,
+    abilities[entityId] = {
+      shoot: {
+        id: "shoot",
+        target: "point",
+        cooldown: 2,
+      },
+      teleport: {
+        id: "teleport",
+        target: "point",
+        cooldown: 7,
+      },
     };
 
     return entityId;
