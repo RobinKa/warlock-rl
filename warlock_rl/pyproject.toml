@@ -24,12 +24,15 @@ nvidia-curand-cu12 = "^10.3.3.141"
 nvidia-cusolver-cu12 = "^11.5.2.141"
 nvidia-nvjitlink-cu12 = "^12.2.140"
 nvidia-nvtx-cu12 = "^12.2.140"
+dataclasses-json = "^0.6.1"
 
 
 [tool.poetry.group.dev.dependencies]
 tensorboard = "^2.14.1"
 gputil = "^1.4.0"
 ruff = "^0.0.292"
+pytest = "^7.4.2"
+pytest-xdist = "^3.3.1"
 
 [build-system]
 requires = ["poetry-core"]

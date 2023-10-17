@@ -52,28 +52,20 @@ export const makeGame = ({ deltaTime, seed }: MakeGameOptions) => {
     return randomInt() / 4294967296;
   }
 
-  function addPlayer(
-    location: pga.BladeE1 & pga.BladeE2,
-    withVelocity: boolean
-  ): number {
+  function addPlayer(): number {
     const { gameState, bodies, healths, orders, playerOwneds, abilities } =
       components;
 
     const entityId = gameState.nextEntityId++;
 
-    location = {
-      e1: (randomFloat() - 0.5) * 500,
-      e2: (randomFloat() - 0.5) * 500,
+    const location = {
+      e1: randomFloat() * 500 - 250,
+      e2: randomFloat() * 500 - 250,
     };
 
     bodies[entityId] = {
       location: location,
-      velocity: withVelocity
-        ? {
-            e1: (randomFloat() - 0.5) * 500,
-            e2: (randomFloat() - 0.5) * 500,
-          }
-        : { e1: 0, e2: 0 },
+      velocity: { e1: 0, e2: 0 },
       force: { e1: 0, e2: 0 },
       radius: 30,
       dampening: 0.97,

@@ -45,24 +45,26 @@ def action_to_order(action: Sequence[float]) -> dict | None:
 
     match action_type:
         case 0:
+            return None
+        case 1:
             return {
                 "type": "move",
                 "target": target,
             }
-        case 1:
+        case 2:
             return {
                 "type": "useAbility",
                 "abilityId": "shoot",
                 "target": target,
             }
-        case 2:
+        case 3:
             return {
                 "type": "useAbility",
                 "abilityId": "teleport",
                 "target": target,
             }
 
-    return None
+    raise ValueError(f"Unhandled action {action=} {action_type=}")
 
 
 class WarlockEnv(gym.Env):
@@ -88,13 +90,18 @@ class WarlockEnv(gym.Env):
         # 6: Time
         self.observation_space = gym.spaces.Box(0, 1, (7,))
 
+        self._game = Game()
+
     def reset(
         self, *, seed: int | None = None, options: dict[str, Any] | None = None
     ) -> tuple[Any, dict[str, Any]]:
         super().reset(seed=seed, options=options)
-        if self._game is not None:
-            self._game.close()
-        self._game = Game()
+
+        if self._game.started:
+            self._game.log_game()
+
+        self._game.start(num_players=2, seed=seed)
+
         return state_to_obs(self._game.state), {}
 
     def step(
@@ -103,7 +110,9 @@ class WarlockEnv(gym.Env):
         order = action_to_order(action)
 
         old_state = self._game.state
-        self._game.step(order)
+        if order is not None:
+            self._game.order(entity_id=1000, order=order)
+        self._game.step(steps=6)
         new_state = self._game.state
 
         reward = (
@@ -123,9 +132,5 @@ class WarlockEnv(gym.Env):
             or new_state["healths"]["1000"]["current"] == 0
             or new_state["healths"]["1001"]["current"] == 0
         )
-
-        if terminated:
-            self._game.close()
-            self._game = None
 
         return state_to_obs(new_state), reward, terminated, False, {}

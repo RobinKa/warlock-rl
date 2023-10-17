@@ -15,7 +15,8 @@ document.oncontextmenu = (e) => e.preventDefault();
 
 const clone = rfdc({ proto: false });
 
-const isReplay = true;
+const params = new URL(document.location).searchParams;
+const isReplay = !!params.get("isReplay");
 
 let components: GameComponent;
 let localPlayerId: number;
