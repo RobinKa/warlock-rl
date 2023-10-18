@@ -1,5 +1,6 @@
-from warlock_rl.envs import WarlockEnv
 import pytest
+
+from warlock_rl.envs import WarlockEnv
 
 
 @pytest.fixture
@@ -22,7 +23,7 @@ def test_initial(unstarted_env: WarlockEnv):
 
 
 def test_teleport(env: WarlockEnv):
-    env.step([0.5, 0.5, 0, 0, 0, 1])
+    env.step({"player_0": [0.5, 0.5, 0, 0, 0, 0, 1]})
     assert env._game.state["bodies"]["1000"]["location"] == {
         "e1": 0,
         "e2": 0,
@@ -30,9 +31,9 @@ def test_teleport(env: WarlockEnv):
 
 
 def test_move(env: WarlockEnv):
-    env.step([0.5, 0.5, 0, 1, 0, 0])
+    env.step({"player_0": [0.5, 0.5, 0, 0, 1, 0, 0]})
     for _ in range(50):
-        env.step([0, 0, 1, 0, 0, 0])
+        env.step({"player_0": [0, 0, 0, 1, 0, 0, 0]})
     assert env._game.state["bodies"]["1000"]["location"] == {
         "e1": 0,
         "e2": 0,
@@ -40,5 +41,5 @@ def test_move(env: WarlockEnv):
 
 
 def test_shoot(env: WarlockEnv):
-    env.step([0.5, 0.5, 0, 0, 1, 0])
+    env.step({"player_0": [0.5, 0.5, 0, 0, 0, 1, 0]})
     assert len(env._game.state["projectiles"]) == 1, env._game.state
