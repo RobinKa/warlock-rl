@@ -63,12 +63,26 @@ def calculate_reward(old_state, new_state, self_player_index, other_player_index
     ) / 100 - 0.01
 
 
-def action_to_order(action: Sequence[float]) -> dict | None:
+def action_to_order(
+    player_index: int, state: dict, action: Sequence[float]
+) -> dict | None:
+    # Target location
     target = {
         "e1": OBS_LOC_SCALE * (action[0] - 0.5),
         "e2": OBS_LOC_SCALE * (action[1] - 0.5),
     }
-    action_type = np.argmax(action[2:])
+
+    # Add enemy location to target
+    is_target_offset_from_enemy = action[2] >= 0.5
+    if is_target_offset_from_enemy:
+        enemy_index = 1 - player_index  # TODO
+        enemy_entity_id = index_to_entity_id[enemy_index]
+        enemy_location = state["bodies"][enemy_entity_id]["location"]
+        target["e1"] += enemy_location["e1"]
+        target["e2"] += enemy_location["e2"]
+
+    # Chosen action
+    action_type = np.argmax(action[3:])
 
     match action_type:
         case 0:
@@ -104,11 +118,12 @@ class WarlockEnv(MultiAgentEnv):
         # Actions:
         # 0: x
         # 1: y
-        # 2: Nothing
-        # 3: Move
-        # 4: Shoot
-        # 5: Teleport
-        self.action_space = gym.spaces.Box(0, 1, (6,))
+        # 2: Is x,y offset from enemy?
+        # 3: Nothing
+        # 4: Move
+        # 5: Shoot
+        # 6: Teleport
+        self.action_space = gym.spaces.Box(0, 1, (7,))
 
         # Observations:
         # 0: Self health
@@ -153,7 +168,7 @@ class WarlockEnv(MultiAgentEnv):
         self._game.start(num_players=self.num_players, seed=seed)
 
         return self._make_obs(), self._constant_agent_dict({}, False)
-    
+
     def _constant_agent_dict(self, constant, with_all: bool) -> dict:
         d = {}
         if with_all:
@@ -171,7 +186,9 @@ class WarlockEnv(MultiAgentEnv):
         # TODO: Do this in one batch call
         for player_name, action in actions.items():
             player_index = self.player_name_to_index(player_name)
-            order = action_to_order(action)
+            order = action_to_order(
+                player_index=player_index, state=self._game.state, action=action
+            )
             if order is not None:
                 self._game.order(
                     entity_id=index_to_entity_id[player_index], order=order
