@@ -13,7 +13,11 @@ export type OrderUseAbility = {
   target: pga.BladeE1 & pga.BladeE2;
 };
 
-export type Order = OrderMove | OrderUseAbility;
+export type OrderStop = {
+  type: "stop";
+};
+
+export type Order = OrderMove | OrderUseAbility | OrderStop;
 
 export type OrderComponent = {
   order?: Order;

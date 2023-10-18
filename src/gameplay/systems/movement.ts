@@ -1,41 +1,49 @@
-import { EntityComponents, SingletonComponent } from "@/common/components";
 import * as pga from "@/common/ga_zpp";
-import { OrderComponent } from "@/gameplay/components/order";
+import { signedAngleDifference } from "@/common/mathutils";
+import { GameComponent } from "../components";
 import { BodyComponent } from "../components/body";
 import { GameStateComponent } from "../components/gamestate";
 
-export type MovementSystemInputs = {
-  bodies: EntityComponents<BodyComponent>;
-  orders: EntityComponents<OrderComponent>;
-  gameState: SingletonComponent<GameStateComponent>;
-};
+export function turnToTarget(
+  body: BodyComponent,
+  target: pga.BladeE1 & pga.BladeE2,
+  gameState: GameStateComponent
+): boolean {
+  const direction = pga.sub(target, body.location);
+  const targetFacing = Math.atan2(direction.e2, direction.e1);
+  const turnRatePerFrame = gameState.deltaTime * body.turnRate;
 
-export const movementSystem = ({
-  bodies,
-  orders,
-  gameState,
-}: MovementSystemInputs) => {
-  for (const [entityId, order] of Object.entries(orders)) {
-    if (order.order && entityId in bodies) {
+  const deltaAngle = signedAngleDifference(body.facing, targetFacing);
+
+  if (Math.abs(deltaAngle) > turnRatePerFrame) {
+    body.facing += turnRatePerFrame * Math.sign(deltaAngle);
+    return false;
+  }
+
+  body.facing = targetFacing;
+  return true;
+}
+
+export const movementSystem = ({ bodies, gameState, units }: GameComponent) => {
+  for (const [entityId, unit] of Object.entries(units)) {
+    if (unit.state.type === "moving" && entityId in bodies) {
       const body = bodies[entityId];
 
-      switch (order.order.type) {
-        case "move":
-          const bodyToTarget = pga.sub(order.order.target, body.location);
-          const dstSq = pga.innerProduct(bodyToTarget, bodyToTarget).scalar;
-          const dstPerFrame = gameState.moveSpeed * gameState.deltaTime;
+      if (turnToTarget(body, unit.state.target, gameState)) {
+        const bodyToTarget = pga.sub(unit.state.target, body.location);
+        const dstSq = pga.innerProduct(bodyToTarget, bodyToTarget).scalar;
+        const dstPerFrame = gameState.moveSpeed * gameState.deltaTime;
 
-          if (dstSq <= dstPerFrame * dstPerFrame) {
-            body.location = order.order.target;
-            order.order = undefined;
-          } else {
-            const direction = pga.div(bodyToTarget, Math.sqrt(dstSq));
-            body.location = pga.add(
-              body.location,
-              pga.multiply(direction, dstPerFrame)
-            );
-          }
-          break;
+        if (dstSq <= dstPerFrame * dstPerFrame) {
+          body.location = unit.state.target;
+          unit.state = { type: "idle" };
+        } else {
+          const direction = pga.div(bodyToTarget, Math.sqrt(dstSq));
+          body.location = pga.add(
+            body.location,
+            pga.multiply(direction, dstPerFrame)
+          );
+        }
       }
     }
   }

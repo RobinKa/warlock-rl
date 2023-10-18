@@ -1,6 +1,20 @@
 import * as pga from "@/common/ga_zpp";
 import { GameComponent } from "@/gameplay/components";
 import { Ability } from "@/gameplay/components/abilities";
+import { GameStateComponent } from "@/gameplay/components/gamestate";
+import { OrderUseAbility } from "@/gameplay/components/order";
+import { turnToTarget } from "@/gameplay/systems/movement";
+
+export function isAbilityReady(
+  ability: Ability,
+  gameState: GameStateComponent
+): boolean {
+  return (
+    ability.lastUsedFrame === undefined ||
+    gameState.deltaTime * ability.lastUsedFrame + ability.cooldown <=
+      gameState.deltaTime * gameState.frameNumber
+  );
+}
 
 function abilityTeleport(
   entityId: string,
@@ -36,6 +50,8 @@ function abilityShoot(
     velocity,
     force: { e1: 0, e2: 0 },
     radius: 10,
+    facing: 0,
+    turnRate: 0,
   };
 
   projectiles[projectileEntityId] = {
@@ -43,38 +59,13 @@ function abilityShoot(
   };
 }
 
-function handleUseAbilityOrder(entityId: string, components: GameComponent) {
-  const { orders, abilities, gameState } = components;
-
-  // Check if we have a use ability order
-  const order = orders[entityId]?.order;
-  if (order?.type !== "useAbility") {
-    return;
-  }
-
-  // Remove the order
-  orders[entityId].order = undefined;
-
-  // Check if the ability exists
-  const ability: Ability | undefined = abilities[entityId]?.[order.abilityId];
-  if (!ability) {
-    console.warn(
-      "Tried to use ability",
-      order,
-      "which the entity does not have:",
-      abilities[entityId]
-    );
-    return;
-  }
-
-  // Check if shoot is ready
-  if (
-    ability.lastUsedFrame !== undefined &&
-    gameState.deltaTime * ability.lastUsedFrame + ability.cooldown >
-      gameState.deltaTime * gameState.frameNumber
-  ) {
-    return;
-  }
+function useAbility(
+  entityId: string,
+  ability: Ability,
+  castOrder: OrderUseAbility,
+  components: GameComponent
+) {
+  const { gameState } = components;
 
   // Set its last used frame for cooldown
   ability.lastUsedFrame = gameState.frameNumber;
@@ -82,10 +73,10 @@ function handleUseAbilityOrder(entityId: string, components: GameComponent) {
   // Execute the order
   switch (ability.id) {
     case "shoot":
-      abilityShoot(entityId, order.target, components);
+      abilityShoot(entityId, castOrder.target, components);
       break;
     case "teleport":
-      abilityTeleport(entityId, order.target, components);
+      abilityTeleport(entityId, castOrder.target, components);
       break;
     default:
       console.warn("Unhandled ability", ability);
@@ -94,7 +85,50 @@ function handleUseAbilityOrder(entityId: string, components: GameComponent) {
 }
 
 export const abilitySystem = (components: GameComponent) => {
-  for (const entityId in components.orders) {
-    handleUseAbilityOrder(entityId, components);
+  const { units, bodies, abilities, gameState } = components;
+  for (const [entityId, unit] of Object.entries(units)) {
+    if (entityId in bodies) {
+      const body = bodies[entityId];
+
+      if (unit.state.type === "casting") {
+        const { castOrder } = unit.state;
+
+        // Check if the ability exists
+        const ability: Ability | undefined =
+          abilities[entityId]?.[castOrder.abilityId];
+        if (!ability) {
+          console.warn(
+            "Tried to use ability",
+            castOrder,
+            "which the entity does not have:",
+            abilities[entityId]
+          );
+          continue;
+        }
+
+        // Check if ability is ready
+        if (!isAbilityReady(ability, gameState)) {
+          // Set to idle
+          unit.state = {
+            type: "idle",
+          };
+
+          continue;
+        }
+
+        // Turn to face target if necessary
+        if (
+          !castOrder.target ||
+          turnToTarget(body, castOrder.target, gameState)
+        ) {
+          useAbility(entityId, ability, castOrder, components);
+
+          // Set to idle
+          unit.state = {
+            type: "idle",
+          };
+        }
+      }
+    }
   }
 };

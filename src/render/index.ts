@@ -41,43 +41,55 @@ if (isReplay) {
 } else {
   const { components: c, addPlayer } = makeGame({ deltaTime: 1 / 30, seed: 0 });
   components = c;
-  localPlayerId = addPlayer({ e1: 0, e2: 0 }, true);
-  enemyPlayerId = addPlayer({ e1: 0, e2: 200 }, false);
+  localPlayerId = addPlayer();
+  enemyPlayerId = addPlayer();
 }
 
-const app = new PIXI.Application({ background: "#7099bb", resizeTo: window });
+const app = new PIXI.Application({
+  background: "#7099bb",
+  resizeTo: window,
+  antialias: true,
+});
 // @ts-ignore
 document.body.appendChild(app.view);
 
 app.stage.sortableChildren = true;
 
 // UI
+let mousePosition = { x: 0, y: 0 };
+
 const background = new PIXI.Sprite(PIXI.Texture.WHITE);
 background.width = app.view.width;
 background.height = app.view.height;
 background.x = 0;
 background.y = 0;
 background.tint = 0xffaa11;
-background.interactive = true;
-background.on("click", (e) => {
-  const { x, y } = worldStage.transform.worldTransform.applyInverse(e);
-  components.orders[localPlayerId].order = {
-    type: "move",
-    target: { e1: x, e2: y },
-  };
+
+if (!isReplay) {
+  background.interactive = true;
+
+  // Left click to move
+  background.on("click", (e) => {
+    const { x, y } = worldStage.transform.worldTransform.applyInverse(e);
+    components.orders[localPlayerId].order = {
+      type: "move",
+      target: { e1: x, e2: y },
+    };
+  });
+
+  // Track mouse position
+  background.on("mousemove", ({ client }) => {
+    mousePosition = worldStage.transform.worldTransform.applyInverse(client);
+  });
+}
+
+// Zoom
+let zoom = 1;
+background.on("wheel", (e) => {
+  zoom = Math.max(0.1, zoom - 0.1 * Math.sign(e.deltaY));
+  e.preventDefault(); // doesn't work?
 });
-background.on("rightclick", (e) => {
-  const { x, y } = worldStage.transform.worldTransform.applyInverse(e);
-  components.orders[localPlayerId].order = {
-    type: "useAbility",
-    abilityId: "shoot",
-    target: { e1: x, e2: y },
-  };
-});
-let mousePosition = { x: 0, y: 0 };
-background.on("mousemove", ({ client }) => {
-  mousePosition = worldStage.transform.worldTransform.applyInverse(client);
-});
+
 app.stage.addChild(background);
 
 // World
@@ -104,14 +116,12 @@ function handleInput() {
   const { x, y } = mousePosition;
 
   if (keyStates["1"]) {
-    console.log("Input 1");
     components.orders[localPlayerId].order = {
       type: "useAbility",
       abilityId: "shoot",
       target: { e1: x, e2: y },
     };
   } else if (keyStates["2"]) {
-    console.log("Input 2");
     components.orders[localPlayerId].order = {
       type: "useAbility",
       abilityId: "teleport",
@@ -130,7 +140,7 @@ app.ticker.maxFPS = 30;
 
 function render() {
   // Default scale so that vertical is REFERENCE_WIDTH
-  const scale = app.view.width / REFERENCE_WIDTH;
+  const scale = (zoom * app.view.width) / REFERENCE_WIDTH;
   worldStage.scale = new PIXI.Point(scale, scale);
   worldStage.position = new PIXI.Point(app.view.width / 2, app.view.height / 2);
 
@@ -150,6 +160,12 @@ function render() {
       circle.endFill();
       container.addChild(circle);
 
+      const directionIndicator = new PIXI.Graphics();
+      directionIndicator.beginFill(0x333333);
+      directionIndicator.drawRect(10, -3, 32, 6);
+      directionIndicator.rotation = body.facing;
+      container.addChild(directionIndicator);
+
       if (entityId in components.healths) {
         const health = new PIXI.Text(components.healths[entityId].current, {
           fontSize: 30,
@@ -160,12 +176,9 @@ function render() {
       }
 
       if (["1000", "1001"].includes(entityId)) {
-        const playerName = new PIXI.Text(
-          parseInt(entityId) - 1000,
-          {
-            fontSize: 24,
-          }
-        );
+        const playerName = new PIXI.Text(parseInt(entityId) - 1000, {
+          fontSize: 24,
+        });
         playerName.position.set(0, 0);
         playerName.anchor.set(0.5, 0.5);
         container.addChild(playerName);
@@ -185,10 +198,15 @@ function render() {
 
   // Update bodies
   for (const [entityId, body] of Object.entries(components.bodies)) {
+    // Health text
     if (entityId in components.healths) {
-      (bodyContainers[entityId].children[1] as PIXI.Text).text =
+      (bodyContainers[entityId].children[2] as PIXI.Text).text =
         components.healths[entityId].current.toFixed(0);
     }
+    // Direction indicator
+    (bodyContainers[entityId].children[1] as PIXI.Graphics).rotation =
+      body.facing;
+    // Body position
     bodyContainers[entityId].position.set(body.location.e1, body.location.e2);
   }
 }

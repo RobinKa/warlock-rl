@@ -1,4 +1,3 @@
-import * as pga from "@/common/ga_zpp";
 import { GameComponent } from "./components";
 import { gameSystem } from "./systems";
 
@@ -31,6 +30,7 @@ export const makeGame = ({ deltaTime, seed }: MakeGameOptions) => {
     projectiles: {},
     orders: {},
     abilities: {},
+    units: {},
   };
 
   function step() {
@@ -53,8 +53,15 @@ export const makeGame = ({ deltaTime, seed }: MakeGameOptions) => {
   }
 
   function addPlayer(): number {
-    const { gameState, bodies, healths, orders, playerOwneds, abilities } =
-      components;
+    const {
+      gameState,
+      bodies,
+      units,
+      healths,
+      orders,
+      playerOwneds,
+      abilities,
+    } = components;
 
     const entityId = gameState.nextEntityId++;
 
@@ -67,9 +74,13 @@ export const makeGame = ({ deltaTime, seed }: MakeGameOptions) => {
       location: location,
       velocity: { e1: 0, e2: 0 },
       force: { e1: 0, e2: 0 },
+      facing: 0,
+      turnRate: 1.2 / 0.03, // Turn rate is radians per 0.03 seconds
       radius: 30,
       dampening: 0.97,
     };
+
+    units[entityId] = { state: { type: "idle" } };
 
     healths[entityId] = {
       current: 100,
