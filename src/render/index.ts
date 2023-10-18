@@ -159,6 +159,18 @@ function render() {
         container.addChild(health);
       }
 
+      if (["1000", "1001"].includes(entityId)) {
+        const playerName = new PIXI.Text(
+          parseInt(entityId) - 1000,
+          {
+            fontSize: 24,
+          }
+        );
+        playerName.position.set(0, 0);
+        playerName.anchor.set(0.5, 0.5);
+        container.addChild(playerName);
+      }
+
       worldStage.addChild(container);
       bodyContainers[entityId] = container;
     }

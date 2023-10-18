@@ -1,6 +1,7 @@
 from typing import Any, Sequence, SupportsFloat
 
 import gymnasium as gym
+from ray.rllib.env.multi_agent_env import MultiAgentEnv
 import numpy as np
 
 from warlock_rl.game import Game
@@ -8,14 +9,25 @@ from warlock_rl.game import Game
 OBS_LOC_SCALE = 2_000
 MAX_TIME = 30
 
+index_to_entity_id = {
+    0: "1000",
+    1: "1001",
+}
 
-def state_to_obs(state: dict) -> np.ndarray:
-    self_health = state["healths"]["1000"]["current"]
-    other_health = state["healths"]["1001"]["current"]
-    self_x = state["bodies"]["1000"]["location"]["e1"]
-    self_y = state["bodies"]["1000"]["location"]["e2"]
-    other_x = state["bodies"]["1001"]["location"]["e1"]
-    other_y = state["bodies"]["1001"]["location"]["e2"]
+
+# TODO: make work for arbitraryn umber of players
+def state_to_obs(
+    state: dict, self_player_index: int, other_player_index: int
+) -> np.ndarray:
+    self_entity_id = index_to_entity_id[self_player_index]
+    other_entity_id = index_to_entity_id[other_player_index]
+
+    self_health = state["healths"][self_entity_id]["current"]
+    other_health = state["healths"][other_entity_id]["current"]
+    self_x = state["bodies"][self_entity_id]["location"]["e1"]
+    self_y = state["bodies"][self_entity_id]["location"]["e2"]
+    other_x = state["bodies"][other_entity_id]["location"]["e1"]
+    other_y = state["bodies"][other_entity_id]["location"]["e2"]
     elapsed_time = state["gameState"]["deltaTime"] * state["gameState"]["frameNumber"]
 
     return np.clip(
@@ -34,6 +46,21 @@ def state_to_obs(state: dict) -> np.ndarray:
         0,
         1,
     )
+
+
+def calculate_reward(old_state, new_state, self_player_index, other_player_index):
+    self_entity_id = index_to_entity_id[self_player_index]
+    other_entity_id = index_to_entity_id[other_player_index]
+    return (
+        (
+            old_state["healths"][other_entity_id]["current"]
+            - new_state["healths"][other_entity_id]["current"]
+        )
+        + (
+            new_state["healths"][self_entity_id]["current"]
+            - old_state["healths"][self_entity_id]["current"]
+        )
+    ) / 100 - 0.01
 
 
 def action_to_order(action: Sequence[float]) -> dict | None:
@@ -67,10 +94,13 @@ def action_to_order(action: Sequence[float]) -> dict | None:
     raise ValueError(f"Unhandled action {action=} {action_type=}")
 
 
-class WarlockEnv(gym.Env):
+class WarlockEnv(MultiAgentEnv):
     _game: Game | None = None
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args, num_players: int = 2, **kwargs) -> None:
+        assert num_players == 2  # TODO: support different number of players
+
+        self._num_players = num_players
         # Actions:
         # 0: x
         # 1: y
@@ -90,41 +120,66 @@ class WarlockEnv(gym.Env):
         # 6: Time
         self.observation_space = gym.spaces.Box(0, 1, (7,))
 
+        self._agent_ids = {self.player_index_to_name(i) for i in range(num_players)}
+
         self._game = Game()
+
+    @property
+    def num_players(self):
+        return self._num_players
+
+    @classmethod
+    def player_index_to_name(cls, player_index: int) -> str:
+        return f"player_{player_index}"
+
+    @classmethod
+    def player_name_to_index(cls, player_name: str) -> str:
+        return int(player_name[len("player_") :])
+
+    def _make_obs(self):
+        return {
+            self.player_index_to_name(i): state_to_obs(self._game.state, i, 1 - i)
+            for i in range(self.num_players)
+        }
 
     def reset(
         self, *, seed: int | None = None, options: dict[str, Any] | None = None
-    ) -> tuple[Any, dict[str, Any]]:
+    ) -> dict[str, np.ndarray]:
         super().reset(seed=seed, options=options)
 
         if self._game.started:
             self._game.log_game()
 
-        self._game.start(num_players=2, seed=seed)
+        self._game.start(num_players=self.num_players, seed=seed)
 
-        return state_to_obs(self._game.state), {}
+        return self._make_obs(), self._constant_agent_dict({}, False)
+    
+    def _constant_agent_dict(self, constant, with_all: bool) -> dict:
+        d = {}
+        if with_all:
+            d["__all__"] = constant
+        for i in range(self.num_players):
+            d[self.player_index_to_name(i)] = constant
+        return d
 
     def step(
-        self, action: Sequence[float]
+        self, actions: dict[str, Sequence[float]]
     ) -> tuple[Any, SupportsFloat, bool, bool, dict[str, Any]]:
-        order = action_to_order(action)
-
         old_state = self._game.state
-        if order is not None:
-            self._game.order(entity_id=1000, order=order)
+
+        # Set player orders
+        # TODO: Do this in one batch call
+        for player_name, action in actions.items():
+            player_index = self.player_name_to_index(player_name)
+            order = action_to_order(action)
+            if order is not None:
+                self._game.order(
+                    entity_id=index_to_entity_id[player_index], order=order
+                )
+
+        # Advance the game
         self._game.step(steps=6)
         new_state = self._game.state
-
-        reward = (
-            (
-                old_state["healths"]["1001"]["current"]
-                - new_state["healths"]["1001"]["current"]
-            )
-            + (
-                new_state["healths"]["1000"]["current"]
-                - old_state["healths"]["1000"]["current"]
-            )
-        ) / 100 - 0.01
 
         terminated = (
             new_state["gameState"]["deltaTime"] * new_state["gameState"]["frameNumber"]
@@ -133,4 +188,18 @@ class WarlockEnv(gym.Env):
             or new_state["healths"]["1001"]["current"] == 0
         )
 
-        return state_to_obs(new_state), reward, terminated, False, {}
+        return (
+            self._make_obs(),
+            {
+                self.player_index_to_name(i): calculate_reward(
+                    old_state=old_state,
+                    new_state=new_state,
+                    self_player_index=i,
+                    other_player_index=1 - i,
+                )
+                for i in range(self.num_players)
+            },
+            self._constant_agent_dict(terminated, True),
+            self._constant_agent_dict(False, True),
+            self._constant_agent_dict({}, False),
+        )
