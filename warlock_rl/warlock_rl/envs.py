@@ -72,12 +72,15 @@ def action_to_order(
         "e2": OBS_LOC_SCALE * (action[1] - 0.5),
     }
 
-    # Add enemy location to target
+    # Add enemy location to target.
+    # Also make the offset much smaller.
     is_target_offset_from_enemy = action[2] >= 0.5
     if is_target_offset_from_enemy:
         enemy_index = 1 - player_index  # TODO
         enemy_entity_id = index_to_entity_id[enemy_index]
         enemy_location = state["bodies"][enemy_entity_id]["location"]
+        target["e1"] * 0.2
+        target["e2"] * 0.2
         target["e1"] += enemy_location["e1"]
         target["e2"] += enemy_location["e2"]
 
