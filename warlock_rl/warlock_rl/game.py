@@ -120,11 +120,13 @@ class Game:
         )
 
     def step(self, steps: int):
-        # Step for some frames
-        self._send_command(CLICommandStep(steps=steps))
-
-        # Read new state
-        self._read_state()
+        # Step for some frames, done this way so we record hgistory
+        # TODO: dont record all frames but make sure we can step forward
+        # with gameSystem properly
+        for _ in range(steps):
+            self._send_command(CLICommandStep(steps=1))
+            # Read new state
+            self._read_state()
 
     def close(self):
         self._process.stdin.close()
