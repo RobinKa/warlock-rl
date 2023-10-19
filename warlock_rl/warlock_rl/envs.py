@@ -22,33 +22,36 @@ def state_to_obs(
     self_entity_id = index_to_entity_id[self_player_index]
     other_entity_id = index_to_entity_id[other_player_index]
 
-    self_health = state["healths"][self_entity_id]["current"]
-    other_health = state["healths"][other_entity_id]["current"]
-    self_x = state["bodies"][self_entity_id]["location"]["e1"]
-    self_y = state["bodies"][self_entity_id]["location"]["e2"]
-    self_facing_x = np.cos(state["bodies"][self_entity_id]["facing"])
-    self_facing_y = np.sin(state["bodies"][self_entity_id]["facing"])
-    other_x = state["bodies"][other_entity_id]["location"]["e1"]
-    other_y = state["bodies"][other_entity_id]["location"]["e2"]
-    other_facing_x = np.cos(state["bodies"][other_entity_id]["facing"])
-    other_facing_y = np.sin(state["bodies"][other_entity_id]["facing"])
+    def get_player_observations(entity_id: str) -> list[float]:
+        health = state["healths"][entity_id]["current"]
+        x = state["bodies"][entity_id]["location"]["e1"]
+        y = state["bodies"][entity_id]["location"]["e2"]
+        facing_x = np.cos(state["bodies"][entity_id]["facing"])
+        facing_y = np.sin(state["bodies"][entity_id]["facing"])
+        casting = 1 if state["units"][entity_id]["state"]["type"] == "casting" else 0
+        
+        return [
+            health / 100,
+            x / OBS_LOC_SCALE + 0.5,
+            y / OBS_LOC_SCALE + 0.5,
+            facing_x * 0.5 + 0.5,
+            facing_y * 0.5 + 0.5,
+            casting,
+        ]
+
     elapsed_time = state["gameState"]["deltaTime"] * state["gameState"]["frameNumber"]
+
+    observations = (
+        [
+            elapsed_time / MAX_TIME,
+        ]
+        + get_player_observations(self_entity_id)
+        + get_player_observations(other_entity_id)
+    )
 
     return np.clip(
         np.array(
-            [
-                self_health / 100,
-                other_health / 100,
-                self_x / OBS_LOC_SCALE + 0.5,
-                self_y / OBS_LOC_SCALE + 0.5,
-                self_facing_x * 0.5 + 0.5,
-                self_facing_y * 0.5 + 0.5,
-                other_x / OBS_LOC_SCALE + 0.5,
-                other_y / OBS_LOC_SCALE + 0.5,
-                other_facing_x * 0.5 + 0.5,
-                other_facing_y * 0.5 + 0.5,
-                elapsed_time / MAX_TIME,
-            ],
+            observations,
             np.float32,
         ),
         0,
@@ -68,7 +71,7 @@ def calculate_reward(old_state, new_state, self_player_index, other_player_index
             new_state["healths"][self_entity_id]["current"]
             - old_state["healths"][self_entity_id]["current"]
         )
-    ) / 100  # - 0.01
+    ) / 100
 
 
 def action_to_order(
@@ -100,22 +103,26 @@ def action_to_order(
             return None
         case 1:
             return {
-                "type": "move",
-                "target": target,
+                "type": "stop",
             }
         case 2:
             return {
-                "type": "useAbility",
-                "abilityId": "shoot",
+                "type": "move",
                 "target": target,
             }
         case 3:
             return {
                 "type": "useAbility",
-                "abilityId": "teleport",
+                "abilityId": "shoot",
                 "target": target,
             }
         case 4:
+            return {
+                "type": "useAbility",
+                "abilityId": "teleport",
+                "target": target,
+            }
+        case 5:
             return {
                 "type": "useAbility",
                 "abilityId": "scourge",
@@ -136,25 +143,28 @@ class WarlockEnv(MultiAgentEnv):
         # 1: y
         # 2: Is x,y offset from enemy?
         # 3: Nothing
-        # 4: Move
-        # 5: Shoot
-        # 6: Teleport
-        # 7: Scourge
-        self.action_space = gym.spaces.Box(0, 1, (8,))
+        # 4: Stop
+        # 5: Move
+        # 6: Shoot
+        # 7: Teleport
+        # 8: Scourge
+        self.action_space = gym.spaces.Box(0, 1, (9,))
 
         # Observations:
-        # 0: Self health
-        # 1: Other health
+        # 0: Time
+        # 1: Self health
         # 2: Self x
         # 3: Self y
         # 4: Self facing x
         # 5: Self facing y
-        # 6: Other x
-        # 7: Other y
-        # 8: Other facing x
-        # 9: Other facing y
-        # 10: Time
-        self.observation_space = gym.spaces.Box(0, 1, (11,))
+        # 6: Self casting
+        # 7: Other health
+        # 8: Other x
+        # 9: Other y
+        # 10: Other facing x
+        # 11: Other facing y
+        # 12: Other casting
+        self.observation_space = gym.spaces.Box(0, 1, (13,))
 
         self._agent_ids = {self.player_index_to_name(i) for i in range(num_players)}
 

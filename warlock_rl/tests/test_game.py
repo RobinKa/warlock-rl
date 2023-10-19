@@ -1,3 +1,5 @@
+import math
+
 import pytest
 
 from warlock_rl.game import Game
@@ -60,9 +62,13 @@ def test_shoot():
         },
     )
 
-    game.step(
-        steps=1,
-    )
+    cast_frames = math.floor(0.2 / (1 / 30)) + 1
+    print(cast_frames)
+    for _ in range(cast_frames):
+        assert len(game.state["projectiles"]) == 0, game.state
+        game.step(
+            steps=1,
+        )
 
     assert len(game.state["projectiles"]) == 1, game.state
 
@@ -93,6 +99,7 @@ def test_teleport():
 
     assert game.state["bodies"][player_id]["location"] == target, game.state
 
+
 def test_scourge():
     game = Game()
     game.start(num_players=1, seed=None)
@@ -107,8 +114,46 @@ def test_scourge():
         },
     )
 
-    game.step(
-        steps=1,
+    cast_frames = math.floor(0.9 / (1 / 30)) + 1
+    for _ in range(cast_frames):
+        assert game.state["healths"][player_id]["current"] == 100, str(game.state)
+        game.step(
+            steps=1,
+        )
+    # Should be frame 27?
+    assert game.state["healths"][player_id]["current"] == 90, str(game.state)
+
+
+def test_stop_scourge():
+    game = Game()
+    game.start(num_players=1, seed=None)
+
+    player_id = list(game.state["bodies"].keys())[0]
+
+    game.order(
+        entity_id=player_id,
+        order={
+            "type": "useAbility",
+            "abilityId": "scourge",
+        },
     )
 
-    assert game.state["healths"][player_id]["current"] == 90, game.state
+    cast_frames = math.floor(0.9 / (1 / 30)) + 1
+    for _ in range(10):
+        assert game.state["healths"][player_id]["current"] == 100, str(game.state)
+        game.step(
+            steps=1,
+        )
+    game.order(
+        entity_id=player_id,
+        order={
+            "type": "stop",
+        },
+    )
+
+    for _ in range(cast_frames):
+        assert game.state["healths"][player_id]["current"] == 100, str(game.state)
+        game.step(
+            steps=1,
+        )
+    assert game.state["healths"][player_id]["current"] == 100, str(game.state)
