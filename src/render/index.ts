@@ -21,8 +21,8 @@ import { useKeyboard } from "@/common/keyboard";
         "/replay"
       ).then((resp) => resp.json());
 
-      replayName = replays.sort((a, b) =>
-        a.createdAt.localeCompare(b.createdAt)
+      replayName = replays.sort(
+        (a, b) => -a.createdAt.localeCompare(b.createdAt)
       )[0].name;
     }
 
@@ -57,7 +57,6 @@ function startGame(replay?: GameComponent[]) {
       if (replayIndex in replay) {
         components = replay[replayIndex];
       }
-      console.log("advanceReplay", replayIndex, replay.length);
     };
 
     localPlayerId = 1000;
@@ -138,7 +137,7 @@ function startGame(replay?: GameComponent[]) {
   worldStage.addChild(arena.sprite);
 
   // Input
-  const { keyStates, clearKeyStates } = useKeyboard(["1", "2"]);
+  const { keyStates, clearKeyStates } = useKeyboard(["1", "2", "3"]);
   function handleInput() {
     const { x, y } = mousePosition;
 
@@ -153,6 +152,11 @@ function startGame(replay?: GameComponent[]) {
         type: "useAbility",
         abilityId: "teleport",
         target: { e1: x, e2: y },
+      };
+    } else if (keyStates["3"]) {
+      components.orders[localPlayerId].order = {
+        type: "useAbility",
+        abilityId: "scourge",
       };
     }
 

@@ -96,7 +96,7 @@ class Game:
         print("Logging game to", os.path.abspath(game_log_dir))
         os.makedirs(game_log_dir, exist_ok=True)
         with gzip.open(
-            os.path.join(game_log_dir, "state_history.json"),
+            os.path.join(game_log_dir, "state_history.json.gz"),
             "wt",
             encoding="utf-8"
         ) as state_history_file:

@@ -107,6 +107,11 @@ export const makeGame = ({ deltaTime, seed }: MakeGameOptions) => {
         target: "point",
         cooldown: 7,
       },
+      scourge: {
+        id: "scourge",
+        target: "none",
+        cooldown: 3,
+      },
     };
 
     return entityId;

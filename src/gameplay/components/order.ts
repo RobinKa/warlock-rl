@@ -8,10 +8,15 @@ export type OrderMove = {
 
 export type OrderUseAbility = {
   type: "useAbility";
-} & {
-  abilityId: AbilityOfTarget<"point">["id"];
-  target: pga.BladeE1 & pga.BladeE2;
-};
+} & (
+  | {
+      abilityId: AbilityOfTarget<"point">["id"];
+      target: pga.BladeE1 & pga.BladeE2;
+    }
+  | {
+      abilityId: AbilityOfTarget<"none">["id"];
+    }
+);
 
 export type OrderStop = {
   type: "stop";

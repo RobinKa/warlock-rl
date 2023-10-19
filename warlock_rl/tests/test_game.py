@@ -92,3 +92,23 @@ def test_teleport():
     )
 
     assert game.state["bodies"][player_id]["location"] == target, game.state
+
+def test_scourge():
+    game = Game()
+    game.start(num_players=1, seed=None)
+
+    player_id = list(game.state["bodies"].keys())[0]
+
+    game.order(
+        entity_id=player_id,
+        order={
+            "type": "useAbility",
+            "abilityId": "scourge",
+        },
+    )
+
+    game.step(
+        steps=1,
+    )
+
+    assert game.state["healths"][player_id]["current"] == 90, game.state

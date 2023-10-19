@@ -59,6 +59,68 @@ function abilityShoot(
   };
 }
 
+function abilityScourge(
+  entityId: string,
+  { bodies, healths, units }: GameComponent
+) {
+  const scourgeDamage = 10;
+  const scourgeRadius = 250;
+  const scourgeScaleMin = 0.75;
+  const scourgeScaleMax = 1;
+
+  if (entityId in healths) {
+    healths[entityId].current = Math.max(
+      1,
+      healths[entityId].current - scourgeDamage
+    );
+  }
+
+  if (!(entityId in bodies)) {
+    return;
+  }
+
+  const body = bodies[entityId];
+
+  for (let otherEntityId in units) {
+    // Skip self
+    if (otherEntityId === entityId) {
+      continue;
+    }
+
+    if (otherEntityId in healths) {
+      healths[otherEntityId].current = Math.max(
+        0,
+        healths[otherEntityId].current - scourgeDamage
+      );
+    }
+
+    if (otherEntityId in bodies) {
+      const otherBody = bodies[otherEntityId];
+
+      const offset = pga.sub(otherBody.location, body.location);
+      const distanceSq = pga.innerProduct(offset, offset).scalar;
+      if (distanceSq <= scourgeRadius * scourgeRadius) {
+        const distance = Math.sqrt(distanceSq);
+
+        const alpha = distance / scourgeRadius;
+        let kbFactor = alpha * scourgeScaleMax + (1 - alpha) * scourgeScaleMin;
+
+        kbFactor *= 10 * scourgeDamage;
+
+        if (otherEntityId in units) {
+          kbFactor *= units[otherEntityId].knockbackMultiplier;
+          units[otherEntityId].knockbackMultiplier += scourgeDamage / 100;
+        }
+
+        const direction = pga.div(offset, distance);
+        const kb = pga.multiply(direction, kbFactor);
+
+        otherBody.velocity = pga.add(otherBody.velocity, kb);
+      }
+    }
+  }
+}
+
 function useAbility(
   entityId: string,
   ability: Ability,
@@ -72,6 +134,9 @@ function useAbility(
 
   // Execute the order
   switch (ability.id) {
+    case "scourge":
+      abilityScourge(entityId, components);
+      break;
     case "shoot":
       abilityShoot(entityId, castOrder.target, components);
       break;

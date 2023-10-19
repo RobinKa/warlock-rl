@@ -23,7 +23,7 @@ def test_initial(unstarted_env: WarlockEnv):
 
 
 def test_teleport(env: WarlockEnv):
-    env.step({"player_0": [0.5, 0.5, 0, 0, 0, 0, 1]})
+    env.step({"player_0": [0.5, 0.5, 0, 0, 0, 0, 1, 0]})
     assert env._game.state["bodies"]["1000"]["location"] == {
         "e1": 0,
         "e2": 0,
@@ -31,7 +31,7 @@ def test_teleport(env: WarlockEnv):
 
 
 def test_move(env: WarlockEnv):
-    env.step({"player_0": [0.5, 0.5, 0, 0, 1, 0, 0]})
+    env.step({"player_0": [0.5, 0.5, 0, 0, 1, 0, 0, 0]})
     for _ in range(50):
         env.step({"player_0": [0, 0, 0, 1, 0, 0, 0]})
     assert env._game.state["bodies"]["1000"]["location"] == {
@@ -41,5 +41,13 @@ def test_move(env: WarlockEnv):
 
 
 def test_shoot(env: WarlockEnv):
-    env.step({"player_0": [0.5, 0.5, 0, 0, 0, 1, 0]})
+    env.step({"player_0": [0.5, 0.5, 0, 0, 0, 1, 0, 0]})
     assert len(env._game.state["projectiles"]) == 1, env._game.state
+
+
+def test_scourge(env: WarlockEnv):
+    env.step({"player_0": [0.5, 0.5, 0, 0, 0, 0, 0, 1]})
+    assert len(env._game.state["projectiles"]) == 0, env._game.state
+    health = env._game.state["healths"]["1000"]["current"]
+    # Health regen for 5 frames, so not exactly 90
+    assert 90 < health < 91, env._game.state

@@ -3,6 +3,11 @@ export type AbilityCommon = {
   cooldown: number;
 };
 
+export type AbilityScourge = {
+  id: "scourge";
+  target: "none";
+};
+
 export type AbilityShoot = {
   id: "shoot";
   target: "point";
@@ -13,15 +18,19 @@ export type AbilityTeleport = {
   target: "point";
 };
 
-export type Ability = AbilityCommon & (AbilityShoot | AbilityTeleport);
+export type Ability = AbilityCommon &
+  (AbilityScourge | AbilityShoot | AbilityTeleport);
 
 export type AbilityId = Ability["id"];
 export type AbilityTarget = Ability["target"];
 
-export type AbilityOfTarget<T extends Ability["target"]> = Ability extends {
+type AbilityOfTargetGeneric<Ability, T> = Ability extends {
   target: T;
 }
   ? Ability
   : never;
+
+// Doesn't work without using the generic version for some reason
+export type AbilityOfTarget<T> = AbilityOfTargetGeneric<Ability, T>;
 
 export type AbilitiesComponent = Record<AbilityId, Ability>;
