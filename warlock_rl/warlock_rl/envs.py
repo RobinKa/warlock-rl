@@ -15,12 +15,24 @@ index_to_entity_id = {
 }
 
 
-# TODO: make work for arbitraryn umber of players
+# TODO: make work for arbitrary number of players
 def state_to_obs(
     state: dict, self_player_index: int, other_player_index: int
 ) -> np.ndarray:
     self_entity_id = index_to_entity_id[self_player_index]
     other_entity_id = index_to_entity_id[other_player_index]
+
+    def get_ability_relative_cooldown(entity_id: str, ability_id: str) -> float:
+        ability = state["abilities"][entity_id][ability_id]
+        if "lastUsedFrame" not in ability:
+            return 0.0
+        cooldown = max(
+            0.0,
+            ability["lastUsedFrame"] * state["gameState"]["deltaTime"]
+            + ability["cooldown"]
+            - state["gameState"]["frameNumber"] * state["gameState"]["deltaTime"],
+        )
+        return cooldown / ability["cooldown"]
 
     def get_player_observations(entity_id: str) -> list[float]:
         health = state["healths"][entity_id]["current"]
@@ -29,6 +41,10 @@ def state_to_obs(
         facing_x = np.cos(state["bodies"][entity_id]["facing"])
         facing_y = np.sin(state["bodies"][entity_id]["facing"])
         casting = 1 if state["units"][entity_id]["state"]["type"] == "casting" else 0
+        ability_cooldowns = [
+            get_ability_relative_cooldown(entity_id, ability_id)
+            for ability_id in ["shoot", "scourge", "teleport"]
+        ]
 
         return [
             health / 100,
@@ -37,6 +53,7 @@ def state_to_obs(
             facing_x * 0.5 + 0.5,
             facing_y * 0.5 + 0.5,
             casting,
+            *ability_cooldowns,
         ]
 
     elapsed_time = state["gameState"]["deltaTime"] * state["gameState"]["frameNumber"]
@@ -62,7 +79,7 @@ def state_to_obs(
 def calculate_reward(old_state, new_state, self_player_index, other_player_index):
     self_entity_id = index_to_entity_id[self_player_index]
     other_entity_id = index_to_entity_id[other_player_index]
-    return (
+    reward = (
         (
             old_state["healths"][other_entity_id]["current"]
             - new_state["healths"][other_entity_id]["current"]
@@ -72,6 +89,29 @@ def calculate_reward(old_state, new_state, self_player_index, other_player_index
             - old_state["healths"][self_entity_id]["current"]
         )
     ) / 100
+
+    # Reward for teleporting on platform.
+    # Negative for self to avoid non-zero-sum reward.
+    # TODO: Anneal this down?
+
+    def teleport_reward(entity_id, sign):
+        if (
+            new_state["abilities"][entity_id]["teleport"].get("lastUsedFrame", -2) + 1
+            == new_state["gameState"]["frameNumber"]
+        ):
+            distance_to_center_sq = (
+                new_state["bodies"][entity_id]["location"]["e1"] ** 2
+                + new_state["bodies"][entity_id]["location"]["e2"] ** 2
+            )
+            arena_radius_sq = new_state["arena"]["radius"] ** 2
+            if distance_to_center_sq <= arena_radius_sq:
+                return sign * 0.2
+        return 0.0
+
+    reward += teleport_reward(self_entity_id, 1)
+    reward += teleport_reward(other_entity_id, -1)
+
+    return reward
 
 
 def action_to_order(
@@ -117,6 +157,8 @@ def action_to_order(
                 "target": target,
             }
         case 4:
+            target["e1"] *= 0.5
+            target["e2"] *= 0.5
             return {
                 "type": "useAbility",
                 "abilityId": "teleport",
@@ -158,13 +200,19 @@ class WarlockEnv(MultiAgentEnv):
         # 4: Self facing x
         # 5: Self facing y
         # 6: Self casting
-        # 7: Other health
-        # 8: Other x
-        # 9: Other y
-        # 10: Other facing x
-        # 11: Other facing y
-        # 12: Other casting
-        self.observation_space = gym.spaces.Box(0, 1, (13,))
+        # 7: Self Cooldown Shoot
+        # 8: Self Cooldown Teleport
+        # 9: Self Cooldown Scourge
+        # 10: Other health
+        # 11: Other x
+        # 12: Other y
+        # 13: Other facing x
+        # 14: Other facing y
+        # 15: Other casting
+        # 16: Other Cooldown Shoot
+        # 17: Other Cooldown Teleport
+        # 18: Other Cooldown Scourge
+        self.observation_space = gym.spaces.Box(0, 1, (19,))
 
         self._agent_ids = {self.player_index_to_name(i) for i in range(num_players)}
 
