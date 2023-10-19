@@ -33,6 +33,9 @@ algo = (
     .training(
         model={
             "fcnet_hiddens": [64, 64],
+            "use_lstm": True,
+            "lstm_cell_size": 64,
+            "max_seq_len": 16,
         },
         train_batch_size=6400,
     )
@@ -40,15 +43,17 @@ algo = (
         policies={
             "player_0": PolicySpec(),
             "player_1": PolicySpec(),
+            # "player_1": PolicySpec(policy_class=RandomPolicy),
         },
         policy_mapping_fn=policy_mapping_fn,
-        # policies_to_train=["player_1"],
+        policies_to_train=["player_0", "player_1"],
     )
     .rl_module(
         rl_module_spec=MultiAgentRLModuleSpec(
             module_specs={
                 "player_0": SingleAgentRLModuleSpec(),
                 "player_1": SingleAgentRLModuleSpec(),
+                # "player_1": SingleAgentRLModuleSpec(module_class=RandomRLModule),
             }
         ),
     )
