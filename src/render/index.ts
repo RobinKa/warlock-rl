@@ -3,10 +3,10 @@
 
 import * as PIXI from "pixi.js";
 
+import { deepCopy } from "@/common";
 import { makeGame } from "@/gameplay";
 import { GameComponent } from "@/gameplay/components";
 import { gameSystem } from "@/gameplay/systems";
-
 import { useKeyboard } from "@/common/keyboard";
 
 (async function () {
@@ -53,9 +53,29 @@ function startGame(replay?: GameComponent[]) {
     components = replay[0] as GameComponent;
 
     advanceReplay = () => {
+      const previousComponents = replay[replayIndex];
       replayIndex++;
       if (replayIndex in replay) {
         components = replay[replayIndex];
+
+        for (const entityId in components.healths) {
+          if (
+            components.healths[entityId].current -
+              previousComponents.healths[entityId].current <
+            -9
+          ) {
+            console.log(
+              entityId,
+              previousComponents.healths[entityId].current,
+              "->",
+              components.healths[entityId].current,
+              "before:",
+              previousComponents,
+              "after:",
+              components
+            );
+          }
+        }
       }
     };
 

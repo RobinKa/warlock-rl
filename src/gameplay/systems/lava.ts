@@ -1,13 +1,9 @@
 import * as pga from "@/common/ga_zpp";
 import { GameComponent } from "@/gameplay/components";
+import { dealDamage } from "@/gameplay/damage";
 
-export const lavaSystem = ({
-  healths,
-  bodies,
-  units,
-  arena,
-  gameState,
-}: GameComponent) => {
+export const lavaSystem = (components: GameComponent) => {
+  const { healths, bodies, units, arena, gameState } = components;
   const damage = arena.lavaDamage * gameState.deltaTime;
   const time = gameState.deltaTime * gameState.frameNumber;
   if (time >= arena.nextShrinkTime) {
@@ -23,14 +19,10 @@ export const lavaSystem = ({
       ).scalar;
 
       if (radiusSquared > arena.radius * arena.radius) {
-        healths[entityId].current = Math.max(
-          0,
-          healths[entityId].current - damage
-        );
-
-        if (entityId in units) {
-          units[entityId].knockbackMultiplier += (0.5 * damage) / 100;
-        }
+        dealDamage(entityId, components, {
+          amount: damage,
+          knockbackMultiplierIncreaseMultiplier: 0.5,
+        });
       }
     }
   }

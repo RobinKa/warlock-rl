@@ -4,6 +4,7 @@ import { Ability } from "@/gameplay/components/abilities";
 import { GameStateComponent } from "@/gameplay/components/gamestate";
 import { OrderUseAbility } from "@/gameplay/components/order";
 import { turnToTarget } from "@/gameplay/systems/movement";
+import { dealDamage } from "@/gameplay/damage";
 
 export function isAbilityReady(
   ability: Ability,
@@ -59,15 +60,15 @@ function abilityShoot(
   };
 }
 
-function abilityScourge(
-  entityId: string,
-  { bodies, healths, units }: GameComponent
-) {
+function abilityScourge(entityId: string, components: GameComponent) {
   const scourgeDamage = 10;
   const scourgeRadius = 250;
   const scourgeScaleMin = 0.75;
   const scourgeScaleMax = 1;
 
+  const { bodies, healths, units } = components;
+
+  // Damage self
   if (entityId in healths) {
     healths[entityId].current = Math.max(
       1,
@@ -81,17 +82,11 @@ function abilityScourge(
 
   const body = bodies[entityId];
 
+  // Damage others
   for (let otherEntityId in units) {
     // Skip self
     if (otherEntityId === entityId) {
       continue;
-    }
-
-    if (otherEntityId in healths) {
-      healths[otherEntityId].current = Math.max(
-        0,
-        healths[otherEntityId].current - scourgeDamage
-      );
     }
 
     if (otherEntityId in bodies) {
@@ -101,21 +96,17 @@ function abilityScourge(
       const distanceSq = pga.innerProduct(offset, offset).scalar;
       if (distanceSq <= scourgeRadius * scourgeRadius) {
         const distance = Math.sqrt(distanceSq);
+        const knockbackDirection = pga.div(offset, distance);
 
         const alpha = distance / scourgeRadius;
-        let kbFactor = (1 - alpha) * scourgeScaleMax + alpha * scourgeScaleMin;
+        const knockbackMultiplier =
+          (1 - alpha) * scourgeScaleMax + alpha * scourgeScaleMin;
 
-        kbFactor *= 10 * scourgeDamage;
-
-        if (otherEntityId in units) {
-          kbFactor *= units[otherEntityId].knockbackMultiplier;
-          units[otherEntityId].knockbackMultiplier += scourgeDamage / 100;
-        }
-
-        const direction = pga.div(offset, distance);
-        const kb = pga.multiply(direction, kbFactor);
-
-        otherBody.velocity = pga.add(otherBody.velocity, kb);
+        dealDamage(otherEntityId, components, {
+          amount: scourgeDamage,
+          knockbackDirection,
+          knockbackMultiplier,
+        });
       }
     }
   }
