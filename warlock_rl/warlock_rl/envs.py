@@ -215,17 +215,21 @@ class WarlockEnv(MultiAgentEnv):
                     entity_id=index_to_entity_id[player_index], order=order
                 )
 
-        # Advance the game
-        # TODO: Check every step whether the game finished
-        self._game.step(steps=6)
-        new_state = self._game.state
+        # Advance the game, check for termination on every frame
+        for _ in range(6):
+            self._game.step(steps=1)
+            new_state = self._game.state
 
-        terminated = (
-            new_state["gameState"]["deltaTime"] * new_state["gameState"]["frameNumber"]
-            >= MAX_TIME
-            or new_state["healths"]["1000"]["current"] == 0
-            or new_state["healths"]["1001"]["current"] == 0
-        )
+            terminated = (
+                new_state["gameState"]["deltaTime"]
+                * new_state["gameState"]["frameNumber"]
+                >= MAX_TIME
+                or new_state["healths"]["1000"]["current"] == 0
+                or new_state["healths"]["1001"]["current"] == 0
+            )
+
+            if terminated:
+                break
 
         return (
             self._make_obs(),
