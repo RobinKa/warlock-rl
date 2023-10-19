@@ -6,7 +6,7 @@ from typing import Literal
 
 import ujson as json
 from dataclasses_json import dataclass_json
-
+import gzip
 
 @dataclass_json
 @dataclass
@@ -95,10 +95,10 @@ class Game:
         game_log_dir = os.path.join("..", "logs", self._game_id)
         print("Logging game to", os.path.abspath(game_log_dir))
         os.makedirs(game_log_dir, exist_ok=True)
-        with open(
+        with gzip.open(
             os.path.join(game_log_dir, "state_history.json"),
-            "w",
-            encoding="utf-8",
+            "wt",
+            encoding="utf-8"
         ) as state_history_file:
             json.dump(self._state_history, state_history_file)
 

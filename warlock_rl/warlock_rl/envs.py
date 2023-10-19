@@ -210,6 +210,7 @@ class WarlockEnv(MultiAgentEnv):
                 )
 
         # Advance the game
+        # TODO: Check every step whether the game finished
         self._game.step(steps=6)
         new_state = self._game.state
 
