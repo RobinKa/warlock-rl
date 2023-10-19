@@ -38,7 +38,7 @@ function abilityShoot(
   const direction = pga.div(bodyLocationToTarget, distance);
 
   const location = pga.add(bodyLocation, pga.multiply(direction, 50));
-  const velocity = pga.multiply(direction, 700);
+  const velocity = pga.multiply(direction, 1000);
 
   const projectileEntityId = gameState.nextEntityId++;
   lifetimes[projectileEntityId] = {
@@ -49,13 +49,13 @@ function abilityShoot(
     location,
     velocity,
     force: { e1: 0, e2: 0 },
-    radius: 10,
+    radius: 25,
     facing: 0,
     turnRate: 0,
   };
 
   projectiles[projectileEntityId] = {
-    damage: 10,
+    damage: 7,
   };
 }
 

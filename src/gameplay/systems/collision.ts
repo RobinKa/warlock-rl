@@ -7,6 +7,7 @@ export const collisionSystem: System<GameComponent> = ({
   projectiles,
   lifetimes,
   healths,
+  units,
 }: GameComponent) => {
   function handleCollision(idA: string, idB: string) {
     if (idA in projectiles) {
@@ -20,10 +21,30 @@ export const collisionSystem: System<GameComponent> = ({
 
       // Conserve momentum
       if (idA in bodies && idB in bodies) {
-        bodies[idB].velocity = pga.add(
-          bodies[idB].velocity,
-          pga.multiply(bodies[idA].velocity, 0.2) // TODO: Use mass
+        let knockbackFactor = 10;
+
+        // More damage is more knockback, smaller slope when damage is high
+        knockbackFactor *=
+          projectiles[idA].damage <= 10
+            ? projectiles[idA].damage
+            : Math.sqrt(10 * projectiles[idA].damage);
+
+        // Knockback multiplier from victim
+        if (idB in units) {
+          knockbackFactor *= units[idB].knockbackMultiplier;
+          units[idB].knockbackMultiplier += projectiles[idA].damage / 100;
+        }
+
+        // TODO: Velocity along hit normal
+        // TODO: Use mass
+        const speed = Math.sqrt(
+          pga.innerProduct(bodies[idA].velocity, bodies[idA].velocity).scalar
         );
+        const direction = pga.div(bodies[idA].velocity, speed);
+
+        // Apply knockback
+        const knockback = pga.multiply(direction, knockbackFactor);
+        bodies[idB].velocity = pga.add(bodies[idB].velocity, knockback);
       }
     }
   }

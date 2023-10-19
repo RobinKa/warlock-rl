@@ -21,6 +21,18 @@ export const gameSystem: System<GameComponent> = (
     lifetimeSystem,
   ];
 
+  // TODO: Move to system
+  for (const [entityId, unit] of Object.entries(components.units)) {
+    if (entityId in components.healths) {
+      const health = components.healths[entityId];
+      health.current = Math.min(
+        health.maximum,
+        health.current +
+          unit.healthRegeneration * components.gameState.deltaTime
+      );
+    }
+  }
+
   systems.forEach((system) => system(components));
 
   components.gameState.frameNumber++;

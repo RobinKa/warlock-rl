@@ -175,6 +175,18 @@ function render() {
         container.addChild(health);
       }
 
+      if (entityId in components.units) {
+        const knockbackMultiplier = new PIXI.Text(
+          components.units[entityId].knockbackMultiplier,
+          {
+            fontSize: 20,
+          }
+        );
+        knockbackMultiplier.position.set(0, -26);
+        knockbackMultiplier.anchor.set(0.5, 1.0);
+        container.addChild(knockbackMultiplier);
+      }
+
       if (["1000", "1001"].includes(entityId)) {
         const playerName = new PIXI.Text(parseInt(entityId) - 1000, {
           fontSize: 24,
@@ -198,10 +210,17 @@ function render() {
 
   // Update bodies
   for (const [entityId, body] of Object.entries(components.bodies)) {
+    // TODO: Don't rely on indices
+
     // Health text
     if (entityId in components.healths) {
       (bodyContainers[entityId].children[2] as PIXI.Text).text =
         components.healths[entityId].current.toFixed(0);
+    }
+    // Knockback multiplier text
+    if (entityId in components.units) {
+      (bodyContainers[entityId].children[3] as PIXI.Text).text =
+        components.units[entityId].knockbackMultiplier.toFixed(2);
     }
     // Direction indicator
     (bodyContainers[entityId].children[1] as PIXI.Graphics).rotation =

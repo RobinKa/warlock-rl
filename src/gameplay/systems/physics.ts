@@ -21,7 +21,7 @@ export const physicsSystem: System<PhysicsSystemInputs> = ({
     if (body.dampening !== undefined) {
       body.velocity = pga.multiply(
         body.velocity,
-        Math.pow(body.dampening, gameState.deltaTime / 0.1)
+        Math.pow(body.dampening, gameState.deltaTime / (1 / 30))
       );
     }
     body.location = pga.add(

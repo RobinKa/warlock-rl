@@ -1,23 +1,14 @@
-import { EntityComponents, SingletonComponent } from "@/common/components";
 import * as pga from "@/common/ga_zpp";
-import { BodyComponent } from "@/gameplay/components/body";
-import { GameStateComponent } from "@/gameplay/components/gamestate";
-import { HealthComponent } from "@/gameplay/components/health";
-import { ArenaComponent } from "../components/arena";
-
-export type LavaSystemInputs = {
-  healths: EntityComponents<HealthComponent>;
-  bodies: EntityComponents<BodyComponent>;
-  arena: SingletonComponent<ArenaComponent>;
-  gameState: SingletonComponent<GameStateComponent>;
-};
+import { GameComponent } from "@/gameplay/components";
 
 export const lavaSystem = ({
   healths,
   bodies,
+  units,
   arena,
   gameState,
-}: LavaSystemInputs) => {
+}: GameComponent) => {
+  const damage = arena.lavaDamage * gameState.deltaTime;
   const time = gameState.deltaTime * gameState.frameNumber;
   if (time >= arena.nextShrinkTime) {
     arena.nextShrinkTime += arena.shrinkInterval;
@@ -34,8 +25,12 @@ export const lavaSystem = ({
       if (radiusSquared > arena.radius * arena.radius) {
         healths[entityId].current = Math.max(
           0,
-          healths[entityId].current - arena.lavaDamage * gameState.deltaTime
+          healths[entityId].current - damage
         );
+
+        if (entityId in units) {
+          units[entityId].knockbackMultiplier += (0.5 * damage) / 100;
+        }
       }
     }
   }

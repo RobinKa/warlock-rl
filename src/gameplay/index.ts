@@ -16,7 +16,7 @@ export const makeGame = ({ deltaTime, seed }: MakeGameOptions) => {
       randomState: seed,
     },
     arena: {
-      radius: 32 * 20,
+      radius: 32 * 15, //20, (13 + 1 per player)
       lavaDamage: 10,
       nextShrinkTime: 10,
       shrinkInterval: 10,
@@ -77,10 +77,14 @@ export const makeGame = ({ deltaTime, seed }: MakeGameOptions) => {
       facing: 0,
       turnRate: 1.2 / 0.03, // Turn rate is radians per 0.03 seconds
       radius: 30,
-      dampening: 0.97,
+      dampening: 0.96,
     };
 
-    units[entityId] = { state: { type: "idle" } };
+    units[entityId] = {
+      state: { type: "idle" },
+      knockbackMultiplier: 1,
+      healthRegeneration: 0.5,
+    };
 
     healths[entityId] = {
       current: 100,

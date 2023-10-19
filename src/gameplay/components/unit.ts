@@ -19,4 +19,6 @@ export type UnitState = UnitStateIdle | UnitStateMoving | UnitStateCasting;
 
 export type UnitComponent = {
   state: UnitState;
+  knockbackMultiplier: number;
+  healthRegeneration: number;
 };
