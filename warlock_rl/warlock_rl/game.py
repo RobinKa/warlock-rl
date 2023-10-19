@@ -76,7 +76,7 @@ class Game:
             self._state_history.clear()
 
         self._game_id = str(uuid.uuid4())
-        print("Starting game", self._game_id)
+        print("Starting game", self._game_id, "with seed", seed)
 
         self._send_command(CLICommandStartGame(seed=seed, numPlayers=num_players))
 

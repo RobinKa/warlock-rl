@@ -46,10 +46,7 @@ for await (const line of console) {
     case "start":
       game = makeGame({
         deltaTime: command.deltaTime ?? 1 / 30,
-        seed:
-          command.seed === undefined
-            ? Math.floor(1_000_000_000 * Math.random())
-            : command.seed,
+        seed: command.seed ?? Math.floor(1_000_000_000 * Math.random()),
       });
 
       for (let i = 0; i < command.numPlayers; i++) {
