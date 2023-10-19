@@ -29,7 +29,7 @@ def state_to_obs(
         facing_x = np.cos(state["bodies"][entity_id]["facing"])
         facing_y = np.sin(state["bodies"][entity_id]["facing"])
         casting = 1 if state["units"][entity_id]["state"]["type"] == "casting" else 0
-        
+
         return [
             health / 100,
             x / OBS_LOC_SCALE + 0.5,

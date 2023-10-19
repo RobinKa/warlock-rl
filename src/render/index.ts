@@ -3,11 +3,10 @@
 
 import * as PIXI from "pixi.js";
 
-import { deepCopy } from "@/common";
+import { useKeyboard } from "@/common/keyboard";
 import { makeGame } from "@/gameplay";
 import { GameComponent } from "@/gameplay/components";
 import { gameSystem } from "@/gameplay/systems";
-import { useKeyboard } from "@/common/keyboard";
 
 (async function () {
   const isReplay = window.location.hash.startsWith("#replay");
@@ -269,6 +268,19 @@ function startGame(replay?: GameComponent[]) {
     // Update bodies
     for (const [entityId, body] of Object.entries(components.bodies)) {
       // TODO: Don't rely on indices
+
+      // Cast state
+      if (entityId in components.units) {
+        const circle = bodyContainers[entityId].children[0] as PIXI.Graphics;
+        circle.clear();
+        circle.beginFill(
+          components.units[entityId].state.type !== "casting"
+            ? 0x00ff00
+            : 0xff0000
+        );
+        circle.drawCircle(0, 0, body.radius);
+        circle.endFill();
+      }
 
       // Health text
       if (entityId in components.healths) {
