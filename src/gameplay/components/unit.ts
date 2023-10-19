@@ -13,6 +13,8 @@ export type UnitStateMoving = {
 export type UnitStateCasting = {
   type: "casting";
   castOrder: OrderUseAbility;
+  startFrame: number;
+  finishedTurning?: boolean;
 };
 
 export type UnitState = UnitStateIdle | UnitStateMoving | UnitStateCasting;

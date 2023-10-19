@@ -174,9 +174,23 @@ export const abilitySystem = (components: GameComponent) => {
 
         // Turn to face target if necessary
         if (
-          !castOrder.target ||
+          unit.state.finishedTurning ||
+          !("target" in castOrder) ||
           turnToTarget(body, castOrder.target, gameState)
         ) {
+          unit.state.finishedTurning = true;
+
+          // Check if cast time is over
+          if (ability.castTime) {
+            const castTimeEnd =
+              unit.state.startFrame * gameState.deltaTime + ability.castTime;
+            const gameTime = gameState.frameNumber * gameState.deltaTime;
+
+            if (gameTime < castTimeEnd) {
+              continue;
+            }
+          }
+
           useAbility(entityId, ability, castOrder, components);
 
           // Set to idle

@@ -1,6 +1,7 @@
 export type AbilityCommon = {
   lastUsedFrame?: number;
   cooldown: number;
+  castTime?: number;
 };
 
 export type AbilityScourge = {

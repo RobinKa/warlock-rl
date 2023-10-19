@@ -101,6 +101,7 @@ export const makeGame = ({ deltaTime, seed }: MakeGameOptions) => {
         id: "shoot",
         target: "point",
         cooldown: 2,
+        castTime: 0.2,
       },
       teleport: {
         id: "teleport",
@@ -111,6 +112,7 @@ export const makeGame = ({ deltaTime, seed }: MakeGameOptions) => {
         id: "scourge",
         target: "none",
         cooldown: 3,
+        castTime: 0.9,
       },
     };
 

@@ -42,7 +42,7 @@ function canUseAbility(
 }
 
 export function orderSystem(components: GameComponent) {
-  const { orders, units } = components;
+  const { orders, units, gameState } = components;
 
   for (const [entityId, order] of Object.entries(orders)) {
     if (entityId in units) {
@@ -67,6 +67,7 @@ export function orderSystem(components: GameComponent) {
               unit.state = {
                 type: "casting",
                 castOrder: order.order,
+                startFrame: gameState.frameNumber,
               };
             }
             break;
