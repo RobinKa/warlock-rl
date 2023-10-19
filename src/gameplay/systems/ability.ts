@@ -103,7 +103,7 @@ function abilityScourge(
         const distance = Math.sqrt(distanceSq);
 
         const alpha = distance / scourgeRadius;
-        let kbFactor = alpha * scourgeScaleMax + (1 - alpha) * scourgeScaleMin;
+        let kbFactor = (1 - alpha) * scourgeScaleMax + alpha * scourgeScaleMin;
 
         kbFactor *= 10 * scourgeDamage;
 
