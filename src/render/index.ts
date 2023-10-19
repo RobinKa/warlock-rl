@@ -6,6 +6,8 @@ import * as PIXI from "pixi.js";
 import { useKeyboard } from "@/common/keyboard";
 import { makeGame } from "@/gameplay";
 import { GameComponent } from "@/gameplay/components";
+import { Ability } from "@/gameplay/components/abilities";
+import { GameStateComponent } from "@/gameplay/components/gamestate";
 import { gameSystem } from "@/gameplay/systems";
 
 (async function () {
@@ -35,6 +37,52 @@ import { gameSystem } from "@/gameplay/systems";
     startGame();
   }
 })();
+
+function useAbilityCooldowns(
+  entityId: number,
+  { abilities, gameState }: GameComponent
+) {
+  const container = new PIXI.Container();
+  const abilityTexts: [PIXI.Text, Ability][] = [];
+
+  function getAbilityCooldown(ability: Ability, gameState: GameStateComponent) {
+    if (ability.lastUsedFrame === undefined) {
+      return 0;
+    }
+
+    return Math.max(
+      0,
+      ability.lastUsedFrame * gameState.deltaTime +
+        ability.cooldown -
+        gameState.frameNumber * gameState.deltaTime
+    );
+  }
+
+  for (const ability of Object.values(abilities[entityId])) {
+    const abilityText = new PIXI.Text(
+      `${ability.id}: ${getAbilityCooldown(ability, gameState).toFixed(1)}s`,
+      {
+        fontSize: 20,
+      }
+    );
+
+    abilityText.position.set(0, Object.keys(abilityTexts).length * 20);
+    abilityText.anchor.set(0.5, 1.0);
+    container.addChild(abilityText);
+    abilityTexts.push([abilityText, ability]);
+  }
+
+  function update({ abilities, gameState }: GameComponent) {
+    for (const [abilityText, ability] of abilityTexts) {
+      abilityText.text = `${ability.id}: ${getAbilityCooldown(
+        abilities[entityId][ability.id],
+        gameState
+      ).toFixed(1)}s`;
+    }
+  }
+
+  return { container, update };
+}
 
 function startGame(replay?: GameComponent[]) {
   const isReplay = replay !== undefined;
@@ -186,6 +234,16 @@ function startGame(replay?: GameComponent[]) {
     clearKeyStates();
   }
 
+  // Cooldown UI
+  const { container: cooldownContainerA, update: updateCooldownsA } =
+    useAbilityCooldowns(1000, components);
+  const { container: cooldownContainerB, update: updateCooldownsB } =
+    useAbilityCooldowns(1001, components);
+  cooldownContainerA.position.set(100, 100);
+  cooldownContainerB.position.set(100, 500);
+  app.stage.addChild(cooldownContainerA);
+  app.stage.addChild(cooldownContainerB);
+
   // Rendering
   const bodyContainers: Record<string, PIXI.Container> = {};
   const REFERENCE_WIDTH = 5_000;
@@ -193,6 +251,9 @@ function startGame(replay?: GameComponent[]) {
   app.ticker.maxFPS = 30;
 
   function render() {
+    updateCooldownsA(components);
+    updateCooldownsB(components);
+
     // Default scale so that vertical is REFERENCE_WIDTH
     const scale = (zoom * app.view.width) / REFERENCE_WIDTH;
     worldStage.scale = new PIXI.Point(scale, scale);
