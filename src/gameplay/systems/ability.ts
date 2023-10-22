@@ -218,6 +218,11 @@ export const abilitySystem = (components: GameComponent) => {
             }
           }
 
+          components.gameEvents.events.push({
+            type: "abilityUsed",
+            entityId,
+            abilityId: ability.id,
+          });
           useAbility(entityId, ability, castOrder, components);
 
           // Set to idle

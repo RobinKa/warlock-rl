@@ -126,10 +126,12 @@ def calculate_reward(old_state, new_state, self_player_index, other_player_index
     # Negative for self to avoid non-zero-sum reward.
     # TODO: Anneal this down?
 
-    def teleport_reward(entity_id, sign):
-        if (
-            new_state["abilities"][entity_id]["teleport"].get("lastUsedFrame", -2) + 1
-            == new_state["gameState"]["frameNumber"]
+    def teleport_reward(entity_id: str):
+        if any(
+            event["type"] == "abilityUsed"
+            and event["entityId"] == entity_id
+            and event["abilityId"] == "teleport"
+            for event in new_state["gameEvents"]["events"]
         ):
             distance_to_center_sq = (
                 new_state["bodies"][entity_id]["location"]["e1"] ** 2
@@ -137,11 +139,11 @@ def calculate_reward(old_state, new_state, self_player_index, other_player_index
             )
             arena_radius_sq = new_state["arena"]["radius"] ** 2
             if distance_to_center_sq <= arena_radius_sq:
-                return sign * 0.2
+                return 0.2
         return 0.0
 
-    reward += teleport_reward(self_entity_id, 1)
-    reward += teleport_reward(other_entity_id, -1)
+    reward += teleport_reward(self_entity_id)
+    reward -= teleport_reward(other_entity_id)
 
     return reward
 

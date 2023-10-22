@@ -15,6 +15,9 @@ export const makeGame = ({ deltaTime, seed }: MakeGameOptions) => {
       nextEntityId: 1_000,
       randomState: seed,
     },
+    gameEvents: {
+      events: [],
+    },
     arena: {
       radius: 32 * 15, //20, (13 + 1 per player)
       lavaDamage: 10,

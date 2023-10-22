@@ -12,6 +12,8 @@ import { physicsSystem } from "./physics";
 export const gameSystem: System<GameComponent> = (
   components: GameComponent
 ) => {
+  components.gameEvents.events.length = 0;
+
   const systems: System<GameComponent>[] = [
     orderSystem,
     abilitySystem,

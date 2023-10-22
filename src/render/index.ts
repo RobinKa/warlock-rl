@@ -379,6 +379,16 @@ function startGame(replay?: GameComponent[]) {
       handleInput();
       gameSystem(components);
     }
+
+    for (const gameEvent of components.gameEvents.events) {
+      console.log(
+        "Frame",
+        components.gameState.frameNumber,
+        "event",
+        gameEvent
+      );
+    }
+
     render();
 
     // Log debug info
