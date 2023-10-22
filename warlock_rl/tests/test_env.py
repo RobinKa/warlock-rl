@@ -1,6 +1,7 @@
+import numpy as np
 import pytest
 
-from warlock_rl.envs import WarlockEnv
+from warlock_rl.envs import MAX_TIME, OBS_LOC_SCALE, WarlockEnv, state_to_obs
 
 
 @pytest.fixture
@@ -59,3 +60,176 @@ def test_scourge(env: WarlockEnv):
         env.step({"player_0": [0, 0, 0, 1, 0, 0, 0, 0, 0, 0]})
     health = env._game.state["healths"]["1000"]["current"]
     assert 90 <= health < 100, env._game.state
+
+
+@pytest.fixture
+def components():
+    return {
+        "gameState": {
+            "frameNumber": 100,
+            "deltaTime": 1 / 30,
+        },
+        "arena": {
+            "radius": 500,
+        },
+        "playerOwneds": {
+            "1000": {
+                "owningPlayerId": 1000,
+            },
+            "1001": {
+                "owningPlayerId": 1001,
+            },
+            "1002": {
+                "owningPlayerId": 1000,
+            },
+            "1003": {
+                "owningPlayerId": 1001,
+            },
+        },
+        "healths": {
+            "1000": {"current": 30, "maximum": 100},
+            "1001": {"current": 100, "maximum": 100},
+        },
+        "bodies": {
+            "1000": {
+                "location": {"e1": 0, "e2": 0},
+                "facing": 0,
+            },
+            "1001": {
+                "location": {"e1": 0, "e2": 100},
+                "facing": np.pi / 2,
+            },
+            "1002": {
+                "location": {"e1": 100, "e2": 0},
+            },
+            "1003": {
+                "location": {"e1": 500, "e2": 100},
+            },
+        },
+        "abilities": {
+            "1000": {
+                "shoot": {"cooldown": 7},
+                "scourge": {"lastUsedFrame": 100, "cooldown": 3},
+                "teleport": {"cooldown": 8},
+                "homing": {"cooldown": 9},
+            },
+            "1001": {
+                "shoot": {"cooldown": 12},
+                "scourge": {"cooldown": 11},
+                "teleport": {"cooldown": 13},
+                "homing": {"cooldown": 14},
+            },
+        },
+        "units": {
+            "1000": {
+                "state": {
+                    "type": "moving",
+                }
+            },
+            "1001": {
+                "state": {
+                    "type": "casting",
+                }
+            },
+        },
+        "projectiles": {
+            "1002": {},
+            "1003": {},
+        },
+    }
+
+
+def test_state_to_obs(unstarted_env: WarlockEnv, components: dict):
+    obs = state_to_obs(components, 0, 1)
+    assert len(obs) == unstarted_env.observation_space.shape[0]
+
+    # Time
+    assert obs[0] == pytest.approx((100 * (1 / 30)) / MAX_TIME, 1e-5)
+
+    # Player 1000 Obs
+    assert obs[1] == pytest.approx(30 / 100, 1e-5)  # hp
+    assert obs[2] == pytest.approx(0 / OBS_LOC_SCALE + 0.5, 1e-5)  # x
+    assert obs[3] == pytest.approx(0 / OBS_LOC_SCALE + 0.5, 1e-5)  # y
+    assert obs[4] == pytest.approx(1, 1e-5)  # facing x
+    assert obs[5] == pytest.approx(0.5, 1e-5)  # facing y
+    assert obs[6] == pytest.approx(0, 1e-5)  # casting
+    assert obs[7] == pytest.approx(1, 1e-5)  # moving
+    assert obs[8] == pytest.approx(0, 1e-5)  # cd shoot
+    assert obs[9] == pytest.approx(1, 1e-5)  # cd scourge
+    assert obs[10] == pytest.approx(0, 1e-5)  # cd teleport
+    assert obs[11] == pytest.approx(0, 1e-5)  # cd homing
+
+    # Player 1001 Obs
+    assert obs[12] == pytest.approx(100 / 100, 1e-5)  # hp
+    assert obs[13] == pytest.approx(0 / OBS_LOC_SCALE + 0.5, 1e-5)  # x
+    assert obs[14] == pytest.approx(100 / OBS_LOC_SCALE + 0.5, 1e-5)  # y
+    assert obs[15] == pytest.approx(0.5, 1e-5)  # facing x
+    assert obs[16] == pytest.approx(1.0, 1e-5)  # facing y
+    assert obs[17] == pytest.approx(1, 1e-5)  # casting
+    assert obs[18] == pytest.approx(0, 1e-5)  # moving
+    assert obs[19] == pytest.approx(0, 1e-5)  # cd shoot
+    assert obs[20] == pytest.approx(0, 1e-5)  # cd scourge
+    assert obs[21] == pytest.approx(0, 1e-5)  # cd teleport
+    assert obs[22] == pytest.approx(0, 1e-5)  # cd homing
+
+    # Projectile 1
+    assert obs[23] == pytest.approx(100 / OBS_LOC_SCALE + 0.5, 1e-5)  # y
+    assert obs[24] == pytest.approx(0 / OBS_LOC_SCALE + 0.5, 1e-5)  # x
+    assert obs[25] == pytest.approx(0, 1e-5)  # is enemy
+
+    # Projectile 2
+    assert obs[26] == pytest.approx(500 / OBS_LOC_SCALE + 0.5, 1e-5)  # y
+    assert obs[27] == pytest.approx(100 / OBS_LOC_SCALE + 0.5, 1e-5)  # x
+    assert obs[28] == pytest.approx(1, 1e-5)  # is enemy
+
+    # Projectile 3
+    assert obs[29] == pytest.approx(0.5, 1e-5)  # y
+    assert obs[30] == pytest.approx(0.5, 1e-5)  # x
+    assert obs[31] == pytest.approx(0.5, 1e-5)  # is enemy
+
+    obs = state_to_obs(components, 1, 0)
+    assert len(obs) == unstarted_env.observation_space.shape[0]
+
+    # Time
+    assert obs[0] == pytest.approx((100 * (1 / 30)) / MAX_TIME, 1e-5)
+
+    # Player 1000 Obs
+    assert obs[12] == pytest.approx(30 / 100, 1e-5)  # hp
+    assert obs[13] == pytest.approx(0 / OBS_LOC_SCALE + 0.5, 1e-5)  # x
+    assert obs[14] == pytest.approx(0 / OBS_LOC_SCALE + 0.5, 1e-5)  # y
+    assert obs[15] == pytest.approx(1, 1e-5)  # facing x
+    assert obs[16] == pytest.approx(0.5, 1e-5)  # facing y
+    assert obs[17] == pytest.approx(0, 1e-5)  # casting
+    assert obs[18] == pytest.approx(1, 1e-5)  # moving
+    assert obs[19] == pytest.approx(0, 1e-5)  # cd shoot
+    assert obs[20] == pytest.approx(1, 1e-5)  # cd scourge
+    assert obs[21] == pytest.approx(0, 1e-5)  # cd teleport
+    assert obs[22] == pytest.approx(0, 1e-5)  # cd homing
+
+    # Player 1001 Obs
+    assert obs[1] == pytest.approx(100 / 100, 1e-5)  # hp
+    assert obs[2] == pytest.approx(0 / OBS_LOC_SCALE + 0.5, 1e-5)  # x
+    assert obs[3] == pytest.approx(100 / OBS_LOC_SCALE + 0.5, 1e-5)  # y
+    assert obs[4] == pytest.approx(0.5, 1e-5)  # facing x
+    assert obs[5] == pytest.approx(1.0, 1e-5)  # facing y
+    assert obs[6] == pytest.approx(1, 1e-5)  # casting
+    assert obs[7] == pytest.approx(0, 1e-5)  # moving
+    assert obs[8] == pytest.approx(0, 1e-5)  # cd shoot
+    assert obs[9] == pytest.approx(0, 1e-5)  # cd scourge
+    assert obs[10] == pytest.approx(0, 1e-5)  # cd teleport
+    assert obs[11] == pytest.approx(0, 1e-5)  # cd homing
+
+    # Projectile 1
+    assert obs[23] == pytest.approx(100 / OBS_LOC_SCALE + 0.5, 1e-5)  # y
+    assert obs[24] == pytest.approx(0 / OBS_LOC_SCALE + 0.5, 1e-5)  # x
+    assert obs[25] == pytest.approx(1, 1e-5)  # is enemy
+
+    # Projectile 2
+    assert obs[26] == pytest.approx(500 / OBS_LOC_SCALE + 0.5, 1e-5)  # y
+    assert obs[27] == pytest.approx(100 / OBS_LOC_SCALE + 0.5, 1e-5)  # x
+    assert obs[28] == pytest.approx(0, 1e-5)  # is enemy
+
+    # Projectile 3
+    assert obs[29] == pytest.approx(0.5, 1e-5)  # y
+    assert obs[30] == pytest.approx(0.5, 1e-5)  # x
+    assert obs[31] == pytest.approx(0.5, 1e-5)  # is enemy

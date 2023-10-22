@@ -41,9 +41,10 @@ def state_to_obs(
         facing_x = np.cos(state["bodies"][entity_id]["facing"])
         facing_y = np.sin(state["bodies"][entity_id]["facing"])
         casting = 1 if state["units"][entity_id]["state"]["type"] == "casting" else 0
+        moving = 1 if state["units"][entity_id]["state"]["type"] == "moving" else 0
         ability_cooldowns = [
             get_ability_relative_cooldown(entity_id, ability_id)
-            for ability_id in ["shoot", "scourge", "teleport"]
+            for ability_id in ["shoot", "scourge", "teleport", "homing"]
         ]
 
         return [
@@ -53,8 +54,36 @@ def state_to_obs(
             facing_x * 0.5 + 0.5,
             facing_y * 0.5 + 0.5,
             casting,
+            moving,
             *ability_cooldowns,
         ]
+
+    def get_projectile_observations(entity_id: str) -> list[float]:
+        x = state["bodies"][entity_id]["location"]["e1"]
+        y = state["bodies"][entity_id]["location"]["e2"]
+        is_enemy = (
+            state["playerOwneds"][entity_id]["owningPlayerId"]
+            != state["playerOwneds"][self_entity_id]["owningPlayerId"]
+        )
+        return [
+            x / OBS_LOC_SCALE + 0.5,
+            y / OBS_LOC_SCALE + 0.5,
+            1 if is_enemy else 0,
+        ]
+
+    def distance_squared_to_self(location: dict[str, float]) -> float:
+        dx = location["e1"] - state["bodies"][self_entity_id]["location"]["e1"]
+        dy = location["e2"] - state["bodies"][self_entity_id]["location"]["e2"]
+        return dx * dx + dy * dy
+
+    sorted_projectiles = sorted(
+        state["projectiles"].items(),
+        key=lambda x: distance_squared_to_self(state["bodies"][x[0]]["location"]),
+    )
+
+    projectile_obs = [[0.5, 0.5, 0.5] for _ in range(3)]
+    for i, (projectile_id, _) in enumerate(sorted_projectiles[: len(projectile_obs)]):
+        projectile_obs[i] = get_projectile_observations(projectile_id)
 
     elapsed_time = state["gameState"]["deltaTime"] * state["gameState"]["frameNumber"]
 
@@ -64,6 +93,9 @@ def state_to_obs(
         ]
         + get_player_observations(self_entity_id)
         + get_player_observations(other_entity_id)
+        + projectile_obs[0]
+        + projectile_obs[1]
+        + projectile_obs[2]
     )
 
     return np.clip(
@@ -157,8 +189,8 @@ def action_to_order(
                 "target": target,
             }
         case 4:
-            target["e1"] *= 0.5
-            target["e2"] *= 0.5
+            target["e1"] *= 0.25
+            target["e2"] *= 0.25
             return {
                 "type": "useAbility",
                 "abilityId": "teleport",
@@ -219,7 +251,8 @@ class WarlockEnv(MultiAgentEnv):
         # 16: Other Cooldown Shoot
         # 17: Other Cooldown Teleport
         # 18: Other Cooldown Scourge
-        self.observation_space = gym.spaces.Box(0, 1, (19,))
+        # 3*3: Proj
+        self.observation_space = gym.spaces.Box(0, 1, (1 + 2 * 11 + 3 * 3,))
 
         self._agent_ids = {self.player_index_to_name(i) for i in range(num_players)}
 
