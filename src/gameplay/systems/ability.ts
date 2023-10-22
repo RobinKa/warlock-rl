@@ -3,8 +3,8 @@ import { GameComponent } from "@/gameplay/components";
 import { Ability } from "@/gameplay/components/abilities";
 import { GameStateComponent } from "@/gameplay/components/gamestate";
 import { OrderUseAbility } from "@/gameplay/components/order";
-import { turnToTarget } from "@/gameplay/systems/movement";
 import { dealDamage } from "@/gameplay/damage";
+import { turnToTarget } from "@/gameplay/systems/movement";
 
 export function isAbilityReady(
   ability: Ability,
@@ -25,10 +25,19 @@ function abilityTeleport(
   bodies[entityId].location = target;
 }
 
+type ProjectileOptions = {
+  damage: number;
+  radius: number;
+  speed: number;
+  lifetime: number;
+  homing?: boolean;
+};
+
 function abilityShoot(
   entityId: string,
   target: pga.BladeE1 & pga.BladeE2,
-  { bodies, lifetimes, projectiles, gameState }: GameComponent
+  { bodies, lifetimes, projectiles, playerOwneds, gameState }: GameComponent,
+  { homing, damage, radius, speed, lifetime }: ProjectileOptions
 ) {
   // Spawn projectile
   const bodyLocation = bodies[entityId].location;
@@ -38,26 +47,30 @@ function abilityShoot(
   );
   const direction = pga.div(bodyLocationToTarget, distance);
 
-  const location = pga.add(bodyLocation, pga.multiply(direction, 50));
-  const velocity = pga.multiply(direction, 1000);
+  const location = bodyLocation;
+  const velocity = pga.multiply(direction, speed);
 
   const projectileEntityId = gameState.nextEntityId++;
+
   lifetimes[projectileEntityId] = {
-    remainingFrames: 3 / gameState.deltaTime,
+    remainingFrames: lifetime / gameState.deltaTime,
   };
 
   bodies[projectileEntityId] = {
     location,
     velocity,
     force: { e1: 0, e2: 0 },
-    radius: 25,
+    radius: radius,
     facing: 0,
     turnRate: 0,
   };
 
   projectiles[projectileEntityId] = {
-    damage: 7,
+    damage,
+    homing,
   };
+
+  playerOwneds[projectileEntityId] = { ...playerOwneds[entityId] };
 }
 
 function abilityScourge(entityId: string, components: GameComponent) {
@@ -129,7 +142,21 @@ function useAbility(
       abilityScourge(entityId, components);
       break;
     case "shoot":
-      abilityShoot(entityId, castOrder.target, components);
+      abilityShoot(entityId, castOrder.target, components, {
+        damage: 7,
+        radius: 25,
+        speed: 1000,
+        lifetime: 3,
+      });
+      break;
+    case "homing":
+      abilityShoot(entityId, castOrder.target, components, {
+        damage: 7,
+        radius: 30,
+        speed: 1000,
+        lifetime: 4500 / 1000,
+        homing: true,
+      });
       break;
     case "teleport":
       abilityTeleport(entityId, castOrder.target, components);

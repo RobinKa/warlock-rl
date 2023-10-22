@@ -2,6 +2,7 @@ import { System } from "@/common/systems";
 import { GameComponent } from "../components";
 import { abilitySystem } from "./ability";
 import { collisionSystem } from "./collision";
+import { homingSystem } from "./homing";
 import { lavaSystem } from "./lava";
 import { lifetimeSystem } from "./lifetime";
 import { movementSystem } from "./movement";
@@ -15,6 +16,7 @@ export const gameSystem: System<GameComponent> = (
     orderSystem,
     abilitySystem,
     movementSystem,
+    homingSystem,
     physicsSystem,
     lavaSystem,
     collisionSystem,

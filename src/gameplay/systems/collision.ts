@@ -7,7 +7,7 @@ import { addImpulse } from "../physics";
 export const collisionSystem: System<GameComponent> = (
   components: GameComponent
 ) => {
-  const { bodies, projectiles, units, lifetimes } = components;
+  const { bodies, projectiles, units, playerOwneds, lifetimes } = components;
 
   function handleCollision(idA: string, idB: string) {
     let normal: (pga.BladeE1 & pga.BladeE2) | undefined = undefined;
@@ -58,19 +58,24 @@ export const collisionSystem: System<GameComponent> = (
     }
 
     // Projectile-Any damage and knockback
-    if (idA in projectiles) {
-      lifetimes[idA] = { remainingFrames: 0 };
-      dealDamage(idB, components, {
-        amount: projectiles[idA].damage,
-        knockbackDirection: normal,
-      });
-    }
-    if (idB in projectiles) {
-      lifetimes[idB] = { remainingFrames: 0 };
-      dealDamage(idA, components, {
-        amount: projectiles[idB].damage,
-        knockbackDirection: normal,
-      });
+    const areEnemies =
+      playerOwneds[idA] === undefined ||
+      playerOwneds[idA]?.owningPlayerId !== playerOwneds[idB]?.owningPlayerId;
+    if (areEnemies) {
+      if (idA in projectiles) {
+        lifetimes[idA] = { remainingFrames: 0 };
+        dealDamage(idB, components, {
+          amount: projectiles[idA].damage,
+          knockbackDirection: normal,
+        });
+      }
+      if (idB in projectiles) {
+        lifetimes[idB] = { remainingFrames: 0 };
+        dealDamage(idA, components, {
+          amount: projectiles[idB].damage,
+          knockbackDirection: normal ? pga.multiply(normal, -1) : undefined,
+        });
+      }
     }
   }
 

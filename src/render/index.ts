@@ -204,7 +204,7 @@ function startGame(replay?: GameComponent[]) {
   worldStage.addChild(arena.sprite);
 
   // Input
-  const { keyStates, clearKeyStates } = useKeyboard(["1", "2", "3", "s"]);
+  const { keyStates, clearKeyStates } = useKeyboard(["1", "2", "3", "4", "s"]);
   function handleInput() {
     const { x, y } = mousePosition;
 
@@ -224,6 +224,12 @@ function startGame(replay?: GameComponent[]) {
       components.orders[localPlayerId].order = {
         type: "useAbility",
         abilityId: "scourge",
+      };
+    } else if (keyStates["4"]) {
+      components.orders[localPlayerId].order = {
+        type: "useAbility",
+        abilityId: "homing",
+        target: { e1: x, e2: y },
       };
     } else if (keyStates["s"]) {
       components.orders[localPlayerId].order = {

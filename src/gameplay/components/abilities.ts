@@ -14,13 +14,18 @@ export type AbilityShoot = {
   target: "point";
 };
 
+export type AbilityHoming = {
+  id: "homing";
+  target: "point";
+};
+
 export type AbilityTeleport = {
   id: "teleport";
   target: "point";
 };
 
 export type Ability = AbilityCommon &
-  (AbilityScourge | AbilityShoot | AbilityTeleport);
+  (AbilityScourge | AbilityShoot | AbilityHoming | AbilityTeleport);
 
 export type AbilityId = Ability["id"];
 export type AbilityTarget = Ability["target"];
