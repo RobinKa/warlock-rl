@@ -22,7 +22,6 @@ export const makeGame = ({ deltaTime, seed }: MakeGameOptions) => {
       shrinkInterval: 10,
       shrinkRadius: 32,
     },
-    actions: {},
     bodies: {},
     healths: {},
     lifetimes: {},

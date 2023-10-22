@@ -1,6 +1,5 @@
 import { EntityComponents, SingletonComponent } from "@/common/components";
 import { AbilitiesComponent } from "./abilities";
-import { ActionsComponent } from "./actions";
 import { ArenaComponent } from "./arena";
 import { BodyComponent } from "./body";
 import { GameStateComponent } from "./gamestate";
@@ -12,7 +11,6 @@ import { ProjectileComponent } from "./projectile";
 import { UnitComponent } from "./unit";
 
 export type GameComponent = {
-  actions: EntityComponents<ActionsComponent>;
   bodies: EntityComponents<BodyComponent>;
   gameState: SingletonComponent<GameStateComponent>;
   healths: EntityComponents<HealthComponent>;
