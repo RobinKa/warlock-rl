@@ -169,6 +169,12 @@ def action_to_order(
                 "type": "useAbility",
                 "abilityId": "scourge",
             }
+        case 6:
+            return {
+                "type": "useAbility",
+                "abilityId": "homing",
+                "target": target,
+            }
 
     raise ValueError(f"Unhandled action {action=} {action_type=}")
 
@@ -190,7 +196,8 @@ class WarlockEnv(MultiAgentEnv):
         # 6: Shoot
         # 7: Teleport
         # 8: Scourge
-        self.action_space = gym.spaces.Box(0, 1, (9,))
+        # 9: Homing
+        self.action_space = gym.spaces.Box(0, 1, (10,))
 
         # Observations:
         # 0: Time
