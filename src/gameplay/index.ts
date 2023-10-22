@@ -77,6 +77,7 @@ export const makeGame = ({ deltaTime, seed }: MakeGameOptions) => {
       turnRate: 1.2 / 0.03, // Turn rate is radians per 0.03 seconds
       radius: 30,
       dampening: 0.96,
+      mass: 100,
     };
 
     units[entityId] = {

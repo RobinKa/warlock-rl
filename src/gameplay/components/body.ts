@@ -11,4 +11,5 @@ export type BodyComponent = {
   radius: number;
 
   dampening?: number;
+  mass?: number
 };
