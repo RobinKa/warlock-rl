@@ -11,7 +11,7 @@ from ray.tune import CLIReporter
 
 from warlock_rl.envs import WarlockEnv
 
-WIN_RATE_THRESHOLD = 0.8
+WIN_RATE_THRESHOLD = 0.9
 
 
 class SelfPlayCallback(DefaultCallbacks):
@@ -123,6 +123,7 @@ algo = (
     )
     .training(
         # _enable_learner_api=False,
+        clip_param=0.2,
         model={
             "fcnet_hiddens": [64],
             # "fcnet_hiddens": [],

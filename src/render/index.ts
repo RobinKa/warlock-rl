@@ -27,6 +27,8 @@ import { gameSystem } from "@/gameplay/systems";
       )[0].name;
     }
 
+    document.title = `Replay - ${replayName}`
+
     fetch(`/replay/${replayName}`)
       .then((resp) => {
         console.log(resp);
@@ -123,6 +125,8 @@ function startGame(replay?: GameComponent[]) {
             );
           }
         }
+      } else {
+        window.location.reload()
       }
     };
 
@@ -177,7 +181,7 @@ function startGame(replay?: GameComponent[]) {
   }
 
   // Zoom
-  let zoom = 1;
+  let zoom = 2;
   background.on("wheel", (e) => {
     zoom = Math.max(0.1, zoom - 0.1 * Math.sign(e.deltaY));
     e.preventDefault(); // doesn't work?
