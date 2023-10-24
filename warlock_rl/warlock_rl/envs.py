@@ -98,14 +98,20 @@ def state_to_obs(
         + projectile_obs[2]
     )
 
-    return np.clip(
+    obs = np.clip(
         np.array(
             observations,
             np.float32,
         ),
         0,
         1,
+        dtype=np.float32,
     )
+
+    assert obs.shape == (1 + 2 * 11 + 3 * 3,), obs
+    assert all(0 <= o <= 1 for o in obs), obs
+
+    return obs
 
 
 def calculate_reward(old_state, new_state, self_player_index, other_player_index):
@@ -142,8 +148,8 @@ def calculate_reward(old_state, new_state, self_player_index, other_player_index
                 return 0.2
         return 0.0
 
-    reward += teleport_reward(self_entity_id)
-    reward -= teleport_reward(other_entity_id)
+    # reward += teleport_reward(self_entity_id)
+    # reward -= teleport_reward(other_entity_id)
 
     return reward
 
@@ -256,26 +262,19 @@ class WarlockEnv(MultiAgentEnv):
         # 3*3: Proj
         self.observation_space = gym.spaces.Box(0, 1, (1 + 2 * 11 + 3 * 3,))
 
-        self._agent_ids = {self.player_index_to_name(i) for i in range(num_players)}
+        self._agent_ids = set(range(num_players))
 
         self._game = Game()
+
+        super().__init__()
 
     @property
     def num_players(self):
         return self._num_players
 
-    @classmethod
-    def player_index_to_name(cls, player_index: int) -> str:
-        return f"player_{player_index}"
-
-    @classmethod
-    def player_name_to_index(cls, player_name: str) -> str:
-        return int(player_name[len("player_") :])
-
     def _make_obs(self):
         return {
-            self.player_index_to_name(i): state_to_obs(self._game.state, i, 1 - i)
-            for i in range(self.num_players)
+            i: state_to_obs(self._game.state, i, 1 - i) for i in range(self.num_players)
         }
 
     def reset(
@@ -288,25 +287,26 @@ class WarlockEnv(MultiAgentEnv):
 
         self._game.start(num_players=self.num_players, seed=seed)
 
-        return self._make_obs(), self._constant_agent_dict({}, False)
+        return self._make_obs(), {}
 
     def _constant_agent_dict(self, constant, with_all: bool) -> dict:
-        d = {}
+        d = {i: constant for i in range(self.num_players)}
         if with_all:
             d["__all__"] = constant
-        for i in range(self.num_players):
-            d[self.player_index_to_name(i)] = constant
         return d
 
     def step(
-        self, actions: dict[str, Sequence[float]]
+        self, actions: dict[int, Sequence[float]]
     ) -> tuple[Any, SupportsFloat, bool, bool, dict[str, Any]]:
+        # assert set(actions.keys()) == {0, 1}, actions
+        # assert len(actions[0]) == self.action_space.shape[0], actions
+        # assert len(actions[1]) == self.action_space.shape[0], actions
+
         old_state = self._game.state
 
         # Set player orders
         # TODO: Do this in one batch call
-        for player_name, action in actions.items():
-            player_index = self.player_name_to_index(player_name)
+        for player_index, action in actions.items():
             order = action_to_order(
                 player_index=player_index, state=self._game.state, action=action
             )
@@ -334,7 +334,7 @@ class WarlockEnv(MultiAgentEnv):
         return (
             self._make_obs(),
             {
-                self.player_index_to_name(i): calculate_reward(
+                i: calculate_reward(
                     old_state=old_state,
                     new_state=new_state,
                     self_player_index=i,
@@ -344,5 +344,5 @@ class WarlockEnv(MultiAgentEnv):
             },
             self._constant_agent_dict(terminated, True),
             self._constant_agent_dict(False, True),
-            self._constant_agent_dict({}, False),
+            {},
         )
