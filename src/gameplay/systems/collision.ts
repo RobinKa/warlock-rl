@@ -39,32 +39,10 @@ export const collisionSystem: System<GameComponent> = (
       integrateBody(bodyA, gameState.deltaTime);
       integrateBody(bodyB, gameState.deltaTime);
 
-      if (r < 0) {
-        // Unit-Unit pushback
-        if (idA in units && idB in units) {
-          // Warlock-Warlock
-          let s = Math.sqrt(-r);
-          if (s < 30) {
-            s = 30;
-          }
-          const displacement = pga.div(aToB, s);
-          bodyA.location = pga.sub(bodyA.location, displacement);
-          bodyB.location = pga.add(bodyB.location, displacement);
-        } else if (idA in units || idB in units) {
-          // Warlock-Pillar
-          if (idA in units) {
-            bodies[idA].location = pga.add(
-              bodies[idB].location,
-              pga.multiply(normal, -radius)
-            );
-          } else {
-            bodies[idB].location = pga.add(
-              bodies[idA].location,
-              pga.multiply(normal, radius)
-            );
-          }
+      function ellasticResponse() {
+        if (normal === undefined) {
+          throw new Error("Normal must be set");
         }
-      } else {
         // Ellastic collision
         const momentumTowards =
           (bodyA.mass ?? 0) * pga.innerProduct(bodyA.velocity, normal).scalar -
@@ -81,6 +59,40 @@ export const collisionSystem: System<GameComponent> = (
             components,
             pga.multiply(normal, elasticity * 0.5 * momentumTowards)
           );
+        }
+      }
+
+      if (idA in projectiles || idB in projectiles) {
+        // TODO: Where is this needed? Maybe shield?
+        // ellasticResponse()
+      } else {
+        if (r < 0) {
+          // Unit-Unit pushback
+          if (idA in units && idB in units) {
+            // Warlock-Warlock
+            let s = Math.sqrt(-r);
+            if (s < 30) {
+              s = 30;
+            }
+            const displacement = pga.div(aToB, s);
+            bodyA.location = pga.sub(bodyA.location, displacement);
+            bodyB.location = pga.add(bodyB.location, displacement);
+          } else if (idA in units || idB in units) {
+            // Warlock-Pillar
+            if (idA in units) {
+              bodies[idA].location = pga.add(
+                bodies[idB].location,
+                pga.multiply(normal, -radius)
+              );
+            } else {
+              bodies[idB].location = pga.add(
+                bodies[idA].location,
+                pga.multiply(normal, radius)
+              );
+            }
+          }
+        } else {
+          ellasticResponse();
         }
       }
     }
