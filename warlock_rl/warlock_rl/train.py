@@ -1,5 +1,6 @@
 import numpy as np
 from ray import air, tune
+from ray.rllib.algorithms.algorithm import Algorithm
 from ray.rllib.algorithms.callbacks import DefaultCallbacks
 from ray.rllib.algorithms.ppo import PPOConfig
 from ray.rllib.core.rl_module.marl_module import MultiAgentRLModuleSpec
@@ -11,7 +12,7 @@ from ray.tune import CLIReporter
 
 from warlock_rl.envs import WarlockEnv
 
-WIN_RATE_THRESHOLD = 0.9
+WIN_RATE_THRESHOLD = 0.95
 
 
 class SelfPlayCallback(DefaultCallbacks):
@@ -20,7 +21,7 @@ class SelfPlayCallback(DefaultCallbacks):
         # 0=RandomPolicy, 1=1st main policy snapshot,
         # 2=2nd main policy snapshot, etc..
         self.current_opponent = 0
-        self.last_changed_iter = None
+        self.last_changed_iter = 0
 
     def on_train_result(self, *, algorithm, result, **kwargs):
         # Get the win rate for the train batch.
@@ -35,8 +36,27 @@ class SelfPlayCallback(DefaultCallbacks):
             if r_main > r_opponent:
                 won += 1
         win_rate = won / len(main_rew)
+
         result["win_rate"] = win_rate
-        print(f"Iter={algorithm.iteration} win-rate={win_rate} -> ", end="")
+        result["league_size"] = self.current_opponent + 2
+
+        print(f"Iter={algorithm.iteration} win-rate={win_rate}")
+
+    def on_evaluate_end(self, *, algorithm: Algorithm, evaluation_metrics: dict, **kwargs):
+        result = evaluation_metrics["evaluation"]["sampler_results"]
+        # Get the win rate for the train batch.
+        # Note that normally, one should set up a proper evaluation config,
+        # such that evaluation always happens on the already updated policy,
+        # instead of on the already used train_batch.
+        main_rew = result["hist_stats"].pop("policy_main_reward")
+        opponent_rew = list(result["hist_stats"].values())[0]
+        assert len(main_rew) == len(opponent_rew)
+        won = 0
+        for r_main, r_opponent in zip(main_rew, opponent_rew):
+            if r_main > r_opponent:
+                won += 1
+        win_rate = won / len(main_rew)
+        print(f"Evaluation Iter={algorithm.iteration} win-rate={win_rate} -> ", end="")
         # If win rate is good -> Snapshot current policy and play against
         # it next, keeping the snapshot fixed and only improving the "main"
         # policy.
@@ -86,12 +106,11 @@ class SelfPlayCallback(DefaultCallbacks):
             new_policy.set_state(main_state)
             # We need to sync the just copied local weights (from main policy)
             # to all the remote workers as well.
-            algorithm.workers.sync_weights()
+            print("good enough; updating model ...")
+            algorithm.workers.sync_weights(timeout_seconds=10)
+            print("updated!")
         else:
             print("not good enough; will keep learning ...")
-
-        # +2 = main + random
-        result["league_size"] = self.current_opponent + 2
 
 
 def policy_mapping_fn(agent_id, episode, worker, **kwargs):
@@ -113,7 +132,7 @@ algo = (
         num_rollout_workers=32,
         num_envs_per_worker=2,
         # rollout_fragment_length=512,
-        rollout_fragment_length=100,
+        rollout_fragment_length=44,
     )
     .resources(
         # num_gpus=1,
@@ -123,21 +142,28 @@ algo = (
     )
     .training(
         # _enable_learner_api=False,
-        clip_param=0.2,
+        # clip_param=0.1,
         model={
-            "fcnet_hiddens": [64],
-            # "fcnet_hiddens": [],
+            "fcnet_hiddens": [128, 128],
+            # "fcnet_hiddens": [64],
             # "use_lstm": True,
             # "lstm_cell_size": 64,
             # "max_seq_len": 16,
         },
         # train_batch_size=3200,
         # sgd_minibatch_size=64,
-        train_batch_size=6400,
+        train_batch_size=44*32*2,
         # train_batch_size=32768,
         # sgd_minibatch_size=1024,
-        # num_sgd_iter=30,
+        # lr=5e-4,
+        num_sgd_iter=4,
         # lr_schedule=[[0, 8e-5], [20_000, 4e-5], [1_200_000, 3e-5]],
+    )
+    .evaluation(
+        evaluation_interval=50,
+        evaluation_duration=32,
+        # evaluation_parallel_to_training=True,
+        # evaluation_num_workers=4,
     )
     .multi_agent(
         policies={
