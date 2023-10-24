@@ -23,4 +23,6 @@ export type UnitComponent = {
   state: UnitState;
   knockbackMultiplier: number;
   healthRegeneration: number;
+  walkVelocity: pga.BladeE1 & pga.BladeE2
+  location: pga.BladeE1 & pga.BladeE2
 };

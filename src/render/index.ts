@@ -27,7 +27,7 @@ import { gameSystem } from "@/gameplay/systems";
       )[0].name;
     }
 
-    document.title = `Replay - ${replayName}`
+    document.title = `Replay - ${replayName}`;
 
     fetch(`/replay/${replayName}`)
       .then((resp) => {
@@ -126,14 +126,19 @@ function startGame(replay?: GameComponent[]) {
           }
         }
       } else {
-        window.location.reload()
+        window.location.reload();
       }
     };
 
     localPlayerId = 1000;
     enemyPlayerId = 1001;
   } else {
-    const { components: c, addPlayer } = makeGame({
+    const {
+      components: c,
+      addPlayer,
+      addPillar,
+      randomRange,
+    } = makeGame({
       deltaTime: 1 / 30,
       seed: 0,
     });

@@ -39,8 +39,8 @@ export const movementSystem = ({ bodies, gameState, units }: GameComponent) => {
           unit.state = { type: "idle" };
         } else {
           const direction = pga.div(bodyToTarget, Math.sqrt(dstSq));
-          body.location = pga.add(
-            body.location,
+          unit.location = pga.add(
+            unit.location,
             pga.multiply(direction, dstPerFrame)
           );
         }

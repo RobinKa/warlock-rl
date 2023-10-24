@@ -87,6 +87,8 @@ export const makeGame = ({ deltaTime, seed }: MakeGameOptions) => {
       state: { type: "idle" },
       knockbackMultiplier: 1,
       healthRegeneration: 0.5,
+      location: {e1: 0, e2: 0},
+      walkVelocity: {e1: 0, e2: 0},
     };
 
     healths[entityId] = {
@@ -128,10 +130,44 @@ export const makeGame = ({ deltaTime, seed }: MakeGameOptions) => {
     return entityId;
   }
 
+  function addPillar(): number {
+    const {
+      gameState,
+      bodies,
+      healths,
+    } = components;
+
+    const entityId = gameState.nextEntityId++;
+
+    const location = {
+      e1: randomFloat() * 500 - 250,
+      e2: randomFloat() * 500 - 250,
+    };
+
+    bodies[entityId] = {
+      location: location,
+      velocity: { e1: 0, e2: 0 },
+      force: { e1: 0, e2: 0 },
+      facing: 0,
+      turnRate: 0,
+      radius: 60,
+      mass: 10_000,
+      static: true,
+    };
+
+    healths[entityId] = {
+      current: 30,
+      maximum: 30,
+    };
+
+    return entityId;
+  }
+
   return {
     components,
     step,
     addPlayer,
+    addPillar,
     randomInt,
     randomRange,
     randomFloat,

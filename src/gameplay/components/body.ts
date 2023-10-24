@@ -12,4 +12,5 @@ export type BodyComponent = {
 
   dampening?: number;
   mass?: number
+  static?: boolean
 };
