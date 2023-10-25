@@ -12,7 +12,9 @@ from ray.tune import CLIReporter
 
 from warlock_rl.envs import WarlockEnv
 
-WIN_RATE_THRESHOLD = 0.95
+WIN_RATE_THRESHOLD = 0.94
+
+
 
 
 class SelfPlayCallback(DefaultCallbacks):
@@ -38,7 +40,7 @@ class SelfPlayCallback(DefaultCallbacks):
         # If win rate is good -> Snapshot current policy and play against
         # it next, keeping the snapshot fixed and only improving the "main"
         # policy.
-        if win_rate > WIN_RATE_THRESHOLD and (
+        if win_rate >= WIN_RATE_THRESHOLD and (
             self.last_changed_iter is None
             or algorithm.iteration > self.last_changed_iter + 5
         ):
@@ -109,8 +111,8 @@ algo = (
     .rollouts(
         num_rollout_workers=32,
         num_envs_per_worker=2,
-        # rollout_fragment_length=512,
-        rollout_fragment_length=44,
+        rollout_fragment_length=512,
+        # rollout_fragment_length=44,
     )
     .resources(
         # num_gpus=1,
@@ -122,7 +124,8 @@ algo = (
         # _enable_learner_api=False,
         # clip_param=0.1,
         model={
-            "fcnet_hiddens": [128, 128],
+            "fcnet_hiddens": [64, 64],
+            # "fcnet_hiddens": [128, 128],
             # "fcnet_hiddens": [64],
             # "use_lstm": True,
             # "lstm_cell_size": 64,
@@ -130,11 +133,11 @@ algo = (
         },
         # train_batch_size=3200,
         # sgd_minibatch_size=64,
-        train_batch_size=44*32*2,
-        # train_batch_size=32768,
-        # sgd_minibatch_size=1024,
-        # lr=5e-4,
-        num_sgd_iter=4,
+        # train_batch_size=44*32*2,
+        train_batch_size=32768,
+        sgd_minibatch_size=32768,
+        # lr=5e-5,
+        # num_sgd_iter=4,
         # lr_schedule=[[0, 8e-5], [20_000, 4e-5], [1_200_000, 3e-5]],
     )
     .evaluation(

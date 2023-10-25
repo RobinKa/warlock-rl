@@ -14,22 +14,21 @@ async function readReplay(path: string): Promise<GameComponent[]> {
   return JSON.parse(buffer.toString("utf-8")) as GameComponent[];
 }
 
+const LOG_DIR = "/mnt/e/warlock_rl_logs/logs/";
+
 export default new Router()
   .get("/replay", async () => {
-    const replays = [];
-    for (const name of await fs.readdir("logs")) {
-      const replayStat = await fs.stat("logs/" + name);
-      replays.push({
-        name,
-        createdAt: replayStat.ctime.toISOString(),
-      });
-    }
-    return new Response(JSON.stringify(replays), {
+    const names = await fs.readdir(LOG_DIR);
+    names.sort();
+    const replayName = names[names.length - 1];
+
+    return new Response(JSON.stringify({ name: replayName }), {
       headers: { "Content-Type": "application/json" },
     });
   })
   .get("/replay/*", async (ctx) => {
-    let path = "./logs/" + ctx.params["*"] + "/state_history.json";
+    let path = LOG_DIR + ctx.params["*"] + "/state_history.json";
+
     if (!(await Bun.file(path).exists())) {
       path += ".gz";
     }

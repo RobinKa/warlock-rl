@@ -18,13 +18,7 @@ import { gameSystem } from "@/gameplay/systems";
     if (window.location.hash.includes("=")) {
       replayName = window.location.hash.split("=", 2)[1];
     } else {
-      const replays: { name: string; createdAt: string }[] = await fetch(
-        "/replay"
-      ).then((resp) => resp.json());
-
-      replayName = replays.sort(
-        (a, b) => -a.createdAt.localeCompare(b.createdAt)
-      )[0].name;
+      replayName = (await fetch("/replay").then((resp) => resp.json())).name;
     }
 
     document.title = `Replay - ${replayName}`;

@@ -1,12 +1,14 @@
+import gzip
 import os
 import subprocess
+import time
 import uuid
 from dataclasses import dataclass
 from typing import Literal
 
 import ujson as json
 from dataclasses_json import dataclass_json
-import gzip
+
 
 @dataclass_json
 @dataclass
@@ -92,7 +94,7 @@ class Game:
         return self._game_id is not None
 
     def log_game(self):
-        game_log_dir = os.path.join("..", "logs", self._game_id)
+        game_log_dir = os.path.join("/mnt", "e", "warlock_rl_logs", "logs", f"{time.time_ns()}_{self._game_id}")
         print("Logging game to", os.path.abspath(game_log_dir))
         os.makedirs(game_log_dir, exist_ok=True)
         with gzip.open(
