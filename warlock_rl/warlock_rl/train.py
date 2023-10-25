@@ -24,18 +24,7 @@ class SelfPlayCallback(DefaultCallbacks):
         self.last_changed_iter = 0
 
     def on_train_result(self, *, algorithm, result, **kwargs):
-        # Get the win rate for the train batch.
-        # Note that normally, one should set up a proper evaluation config,
-        # such that evaluation always happens on the already updated policy,
-        # instead of on the already used train_batch.
-        main_rew = result["hist_stats"].pop("policy_main_reward")
-        opponent_rew = list(result["hist_stats"].values())[0]
-        assert len(main_rew) == len(opponent_rew)
-        won = 0
-        for r_main, r_opponent in zip(main_rew, opponent_rew):
-            if r_main > r_opponent:
-                won += 1
-        win_rate = won / len(main_rew)
+        win_rate = result["sampler_results"]["policy_reward_mean"]["main"]
 
         result["win_rate"] = win_rate
         result["league_size"] = self.current_opponent + 2
@@ -43,19 +32,8 @@ class SelfPlayCallback(DefaultCallbacks):
         print(f"Iter={algorithm.iteration} win-rate={win_rate}")
 
     def on_evaluate_end(self, *, algorithm: Algorithm, evaluation_metrics: dict, **kwargs):
-        result = evaluation_metrics["evaluation"]["sampler_results"]
-        # Get the win rate for the train batch.
-        # Note that normally, one should set up a proper evaluation config,
-        # such that evaluation always happens on the already updated policy,
-        # instead of on the already used train_batch.
-        main_rew = result["hist_stats"].pop("policy_main_reward")
-        opponent_rew = list(result["hist_stats"].values())[0]
-        assert len(main_rew) == len(opponent_rew)
-        won = 0
-        for r_main, r_opponent in zip(main_rew, opponent_rew):
-            if r_main > r_opponent:
-                won += 1
-        win_rate = won / len(main_rew)
+        result = evaluation_metrics["evaluation"]
+        win_rate = result["sampler_results"]["policy_reward_mean"]["main"]
         print(f"Evaluation Iter={algorithm.iteration} win-rate={win_rate} -> ", end="")
         # If win rate is good -> Snapshot current policy and play against
         # it next, keeping the snapshot fixed and only improving the "main"
@@ -161,7 +139,7 @@ algo = (
     )
     .evaluation(
         evaluation_interval=50,
-        evaluation_duration=32,
+        evaluation_duration=50,
         # evaluation_parallel_to_training=True,
         # evaluation_num_workers=4,
     )

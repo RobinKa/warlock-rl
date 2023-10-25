@@ -333,13 +333,19 @@ class WarlockEnv(MultiAgentEnv):
 
         return (
             self._make_obs(),
+            # {
+            #     i: calculate_reward(
+            #         old_state=old_state,
+            #         new_state=new_state,
+            #         self_player_index=i,
+            #         other_player_index=1 - i,
+            #     )
+            #     for i in range(self.num_players)
+            # },
             {
-                i: calculate_reward(
-                    old_state=old_state,
-                    new_state=new_state,
-                    self_player_index=i,
-                    other_player_index=1 - i,
-                )
+                i: 1
+                if terminated and new_state["healths"][index_to_entity_id[1 - i]]["current"] == 0
+                else 0
                 for i in range(self.num_players)
             },
             self._constant_agent_dict(terminated, True),
