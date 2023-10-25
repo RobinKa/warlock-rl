@@ -23,6 +23,7 @@ function abilityTeleport(
   { bodies }: GameComponent
 ) {
   bodies[entityId].location = target;
+  bodies[entityId].velocity = pga.multiply(bodies[entityId].velocity, 0.8);
 }
 
 type ProjectileOptions = {
