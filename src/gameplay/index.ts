@@ -33,6 +33,7 @@ export const makeGame = ({ deltaTime, seed }: MakeGameOptions) => {
     orders: {},
     abilities: {},
     units: {},
+    shields: {},
   };
 
   function step() {
@@ -87,8 +88,8 @@ export const makeGame = ({ deltaTime, seed }: MakeGameOptions) => {
       state: { type: "idle" },
       knockbackMultiplier: 1,
       healthRegeneration: 0.5,
-      location: {e1: 0, e2: 0},
-      walkVelocity: {e1: 0, e2: 0},
+      location: { e1: 0, e2: 0 },
+      walkVelocity: { e1: 0, e2: 0 },
     };
 
     healths[entityId] = {
@@ -125,17 +126,18 @@ export const makeGame = ({ deltaTime, seed }: MakeGameOptions) => {
         cooldown: 3,
         castTime: 0.9,
       },
+      shield: {
+        id: "shield",
+        target: "none",
+        cooldown: 14,
+      },
     };
 
     return entityId;
   }
 
   function addPillar(): number {
-    const {
-      gameState,
-      bodies,
-      healths,
-    } = components;
+    const { gameState, bodies, healths } = components;
 
     const entityId = gameState.nextEntityId++;
 

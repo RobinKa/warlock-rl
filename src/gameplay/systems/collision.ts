@@ -2,8 +2,8 @@ import * as pga from "@/common/ga_zpp";
 import { System } from "@/common/systems";
 import { GameComponent } from "@/gameplay/components";
 import { dealDamage } from "@/gameplay/damage";
-import { addImpulse } from "../physics";
 import { BodyComponent } from "../components/body";
+import { addImpulse } from "../physics";
 
 function integrateBody(body: BodyComponent, dt: number) {
   body.location = pga.add(body.location, pga.multiply(body.velocity, dt));
@@ -12,8 +12,15 @@ function integrateBody(body: BodyComponent, dt: number) {
 export const collisionSystem: System<GameComponent> = (
   components: GameComponent
 ) => {
-  const { bodies, projectiles, units, playerOwneds, lifetimes, gameState } =
-    components;
+  const {
+    bodies,
+    projectiles,
+    units,
+    playerOwneds,
+    lifetimes,
+    shields,
+    gameState,
+  } = components;
 
   function handleCollision(idA: string, idB: string) {
     let normal: (pga.BladeE1 & pga.BladeE2) | undefined = undefined;
@@ -63,7 +70,7 @@ export const collisionSystem: System<GameComponent> = (
       }
 
       if (idA in projectiles || idB in projectiles) {
-        // TODO: Where is this needed? Maybe shield?
+        // TODO: Where is this needed?
         // ellasticResponse()
       } else {
         if (r < 0) {
@@ -97,24 +104,56 @@ export const collisionSystem: System<GameComponent> = (
       }
     }
 
+    function shieldResponse(
+      shieldId: number | string,
+      projectileId: number | string
+    ) {
+      // Change owner
+      if (projectileId in playerOwneds) {
+        // TODO: Consider player id != entity id
+        playerOwneds[projectileId].owningPlayerId = shieldId;
+      }
+
+      // Set target to undefined so it gets reacquired to its new enemy
+      const projectile = projectiles[projectileId];
+      if (projectile?.homing) {
+        projectile.homingTarget = undefined;
+      }
+
+      // TODO: Proper reflection along normal
+      if (projectileId in bodies) {
+        bodies[projectileId].velocity = pga.multiply(
+          bodies[projectileId].velocity,
+          -1
+        );
+      }
+    }
     // Projectile-Any damage and knockback
     const areEnemies =
       playerOwneds[idA] === undefined ||
       playerOwneds[idA]?.owningPlayerId !== playerOwneds[idB]?.owningPlayerId;
     if (areEnemies) {
       if (idA in projectiles) {
-        lifetimes[idA] = { remainingFrames: 0 };
-        dealDamage(idB, components, {
-          amount: projectiles[idA].damage,
-          knockbackDirection: normal,
-        });
+        if (idB in shields) {
+          shieldResponse(idB, idA);
+        } else {
+          lifetimes[idA] = { remainingFrames: 0 };
+          dealDamage(idB, components, {
+            amount: projectiles[idA].damage,
+            knockbackDirection: normal,
+          });
+        }
       }
       if (idB in projectiles) {
-        lifetimes[idB] = { remainingFrames: 0 };
-        dealDamage(idA, components, {
-          amount: projectiles[idB].damage,
-          knockbackDirection: normal ? pga.multiply(normal, -1) : undefined,
-        });
+        if (idA in shields) {
+          shieldResponse(idA, idB);
+        } else {
+          lifetimes[idB] = { remainingFrames: 0 };
+          dealDamage(idA, components, {
+            amount: projectiles[idB].damage,
+            knockbackDirection: normal ? pga.multiply(normal, -1) : undefined,
+          });
+        }
       }
     }
   }

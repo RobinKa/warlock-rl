@@ -207,7 +207,14 @@ function startGame(replay?: GameComponent[]) {
   worldStage.addChild(arena.sprite);
 
   // Input
-  const { keyStates, clearKeyStates } = useKeyboard(["1", "2", "3", "4", "s"]);
+  const { keyStates, clearKeyStates } = useKeyboard([
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "s",
+  ]);
   function handleInput() {
     const { x, y } = mousePosition;
 
@@ -233,6 +240,11 @@ function startGame(replay?: GameComponent[]) {
         type: "useAbility",
         abilityId: "homing",
         target: { e1: x, e2: y },
+      };
+    } else if (keyStates["5"]) {
+      components.orders[localPlayerId].order = {
+        type: "useAbility",
+        abilityId: "shield",
       };
     } else if (keyStates["s"]) {
       components.orders[localPlayerId].order = {
@@ -343,6 +355,13 @@ function startGame(replay?: GameComponent[]) {
       if (entityId in components.units) {
         const circle = bodyContainers[entityId].children[0] as PIXI.Graphics;
         circle.clear();
+
+        if (entityId in components.shields) {
+          circle.beginFill(0x0000ff);
+          circle.drawCircle(0, 0, body.radius + 10);
+          circle.endFill();
+        }
+
         circle.beginFill(
           components.units[entityId].state.type !== "casting"
             ? 0x00ff00

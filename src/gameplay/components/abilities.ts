@@ -24,8 +24,19 @@ export type AbilityTeleport = {
   target: "point";
 };
 
+export type AbilityShield = {
+  id: "shield";
+  target: "none";
+};
+
 export type Ability = AbilityCommon &
-  (AbilityScourge | AbilityShoot | AbilityHoming | AbilityTeleport);
+  (
+    | AbilityScourge
+    | AbilityShoot
+    | AbilityHoming
+    | AbilityTeleport
+    | AbilityShield
+  );
 
 export type AbilityId = Ability["id"];
 export type AbilityTarget = Ability["target"];

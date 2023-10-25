@@ -126,6 +126,17 @@ function abilityScourge(entityId: string, components: GameComponent) {
   }
 }
 
+function abilityShield(entityId: string, components: GameComponent) {
+  const shieldDuration = 1.2;
+
+  const { shields, gameState } = components;
+
+  shields[entityId] = {
+    startFrame: gameState.frameNumber,
+    duration: shieldDuration,
+  };
+}
+
 function useAbility(
   entityId: string,
   ability: Ability,
@@ -162,6 +173,9 @@ function useAbility(
     case "teleport":
       abilityTeleport(entityId, castOrder.target, components);
       break;
+    case "shield":
+      abilityShield(entityId, components);
+      break;
     default:
       console.warn("Unhandled ability", ability);
       break;
@@ -169,7 +183,18 @@ function useAbility(
 }
 
 export const abilitySystem = (components: GameComponent) => {
-  const { units, bodies, abilities, gameState } = components;
+  const { units, bodies, abilities, shields, gameState } = components;
+
+  // Check if any shield expired
+  for (const [entityId, shield] of Object.entries(shields)) {
+    if (
+      gameState.frameNumber * gameState.deltaTime >=
+      shield.startFrame * gameState.deltaTime + shield.duration
+    ) {
+      delete shields[entityId];
+    }
+  }
+
   for (const [entityId, unit] of Object.entries(units)) {
     if (entityId in bodies) {
       const body = bodies[entityId];

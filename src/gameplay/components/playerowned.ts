@@ -1,3 +1,3 @@
 export type PlayerOwnedComponent = {
-    owningPlayerId: number
+    owningPlayerId: number | string
 }

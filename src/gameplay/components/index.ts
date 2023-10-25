@@ -9,6 +9,7 @@ import { LifetimeComponent } from "./lifetime";
 import { OrderComponent } from "./order";
 import { PlayerOwnedComponent } from "./playerowned";
 import { ProjectileComponent } from "./projectile";
+import { ShieldComponent } from "./shield";
 import { UnitComponent } from "./unit";
 
 export type GameComponent = {
@@ -23,4 +24,5 @@ export type GameComponent = {
   arena: SingletonComponent<ArenaComponent>;
   abilities: EntityComponents<AbilitiesComponent>;
   units: EntityComponents<UnitComponent>;
+  shields: EntityComponents<ShieldComponent>;
 };

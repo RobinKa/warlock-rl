@@ -44,7 +44,7 @@ def state_to_obs(
         moving = 1 if state["units"][entity_id]["state"]["type"] == "moving" else 0
         ability_cooldowns = [
             get_ability_relative_cooldown(entity_id, ability_id)
-            for ability_id in ["shoot", "scourge", "teleport", "homing"]
+            for ability_id in ["shoot", "scourge", "teleport", "homing", "shield"]
         ]
 
         return [
@@ -108,7 +108,7 @@ def state_to_obs(
         dtype=np.float32,
     )
 
-    assert obs.shape == (1 + 2 * 11 + 3 * 3,), obs
+    assert obs.shape == (1 + 2 * 12 + 3 * 3,), obs
     assert all(0 <= o <= 1 for o in obs), obs
 
     return obs
@@ -215,6 +215,11 @@ def action_to_order(
                 "abilityId": "homing",
                 "target": target,
             }
+        case 7:
+            return {
+                "type": "useAbility",
+                "abilityId": "shield",
+            }
 
     raise ValueError(f"Unhandled action {action=} {action_type=}")
 
@@ -237,30 +242,11 @@ class WarlockEnv(MultiAgentEnv):
         # 7: Teleport
         # 8: Scourge
         # 9: Homing
-        self.action_space = gym.spaces.Box(0, 1, (10,))
+        # 10: Shield
+        self.action_space = gym.spaces.Box(0, 1, (11,))
 
-        # Observations:
-        # 0: Time
-        # 1: Self health
-        # 2: Self x
-        # 3: Self y
-        # 4: Self facing x
-        # 5: Self facing y
-        # 6: Self casting
-        # 7: Self Cooldown Shoot
-        # 8: Self Cooldown Teleport
-        # 9: Self Cooldown Scourge
-        # 10: Other health
-        # 11: Other x
-        # 12: Other y
-        # 13: Other facing x
-        # 14: Other facing y
-        # 15: Other casting
-        # 16: Other Cooldown Shoot
-        # 17: Other Cooldown Teleport
-        # 18: Other Cooldown Scourge
-        # 3*3: Proj
-        self.observation_space = gym.spaces.Box(0, 1, (1 + 2 * 11 + 3 * 3,))
+        # Observations
+        self.observation_space = gym.spaces.Box(0, 1, (1 + 2 * 12 + 3 * 3,))
 
         self._agent_ids = set(range(num_players))
 
