@@ -111,7 +111,8 @@ export const collisionSystem: System<GameComponent> = (
       // Change owner
       if (projectileId in playerOwneds) {
         // TODO: Consider player id != entity id
-        playerOwneds[projectileId].owningPlayerId = shieldId;
+        playerOwneds[projectileId].owningPlayerId =
+          typeof shieldId === "string" ? parseInt(shieldId) : shieldId;
       }
 
       // Set target to undefined so it gets reacquired to its new enemy
