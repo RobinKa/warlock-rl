@@ -32,13 +32,14 @@ type ProjectileOptions = {
   speed: number;
   lifetime: number;
   homing?: boolean;
+  swap?: boolean;
 };
 
 function abilityShoot(
   entityId: string,
   target: pga.BladeE1 & pga.BladeE2,
   { bodies, lifetimes, projectiles, playerOwneds, gameState }: GameComponent,
-  { homing, damage, radius, speed, lifetime }: ProjectileOptions
+  { homing, swap, damage, radius, speed, lifetime }: ProjectileOptions
 ) {
   // Spawn projectile
   const bodyLocation = bodies[entityId].location;
@@ -54,7 +55,7 @@ function abilityShoot(
   const projectileEntityId = gameState.nextEntityId++;
 
   lifetimes[projectileEntityId] = {
-    remainingFrames: lifetime / gameState.deltaTime,
+    remainingFrames: Math.ceil(lifetime / gameState.deltaTime),
   };
 
   bodies[projectileEntityId] = {
@@ -69,6 +70,7 @@ function abilityShoot(
   projectiles[projectileEntityId] = {
     damage,
     homing,
+    swap,
   };
 
   playerOwneds[projectileEntityId] = { ...playerOwneds[entityId] };
@@ -173,6 +175,15 @@ function useAbility(
     case "teleport":
       abilityTeleport(entityId, castOrder.target, components);
       break;
+    case "swap":
+      abilityShoot(entityId, castOrder.target, components, {
+        damage: 0,
+        radius: 40,
+        speed: 1983,
+        lifetime: 0.4706,
+        swap: true,
+      });
+      break;
     case "shield":
       abilityShield(entityId, components);
       break;
@@ -183,7 +194,16 @@ function useAbility(
 }
 
 export const abilitySystem = (components: GameComponent) => {
-  const { units, bodies, abilities, shields, gameState } = components;
+  const {
+    units,
+    bodies,
+    abilities,
+    shields,
+    projectiles,
+    lifetimes,
+    playerOwneds,
+    gameState,
+  } = components;
 
   // Check if any shield expired
   for (const [entityId, shield] of Object.entries(shields)) {
@@ -192,6 +212,21 @@ export const abilitySystem = (components: GameComponent) => {
       shield.startFrame * gameState.deltaTime + shield.duration
     ) {
       delete shields[entityId];
+    }
+  }
+
+  // Check if any swap projectile expired
+  for (const [entityId, projectile] of Object.entries(projectiles)) {
+    if (
+      projectile.swap &&
+      !projectile.swapped &&
+      entityId in playerOwneds &&
+      lifetimes[entityId]?.remainingFrames === 0
+    ) {
+      const projectileOwnerId = playerOwneds[entityId].owningPlayerId;
+      if (projectileOwnerId in bodies && entityId in bodies) {
+        bodies[projectileOwnerId].location = bodies[entityId].location;
+      }
     }
   }
 

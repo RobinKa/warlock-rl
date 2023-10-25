@@ -44,7 +44,14 @@ def state_to_obs(
         moving = 1 if state["units"][entity_id]["state"]["type"] == "moving" else 0
         ability_cooldowns = [
             get_ability_relative_cooldown(entity_id, ability_id)
-            for ability_id in ["shoot", "scourge", "teleport", "homing", "shield"]
+            for ability_id in [
+                "shoot",
+                "scourge",
+                "teleport",
+                "swap",
+                "homing",
+                "shield",
+            ]
         ]
 
         return [
@@ -205,17 +212,25 @@ def action_to_order(
                 "target": target,
             }
         case 5:
+            target["e1"] *= 0.25
+            target["e2"] *= 0.25
+            return {
+                "type": "useAbility",
+                "abilityId": "swap",
+                "target": target,
+            }
+        case 6:
             return {
                 "type": "useAbility",
                 "abilityId": "scourge",
             }
-        case 6:
+        case 7:
             return {
                 "type": "useAbility",
                 "abilityId": "homing",
                 "target": target,
             }
-        case 7:
+        case 8:
             return {
                 "type": "useAbility",
                 "abilityId": "shield",
@@ -240,13 +255,14 @@ class WarlockEnv(MultiAgentEnv):
         # 5: Move
         # 6: Shoot
         # 7: Teleport
-        # 8: Scourge
-        # 9: Homing
-        # 10: Shield
-        self.action_space = gym.spaces.Box(0, 1, (11,))
+        # 8: Swap
+        # 9: Scourge
+        # 10: Homing
+        # 11: Shield
+        self.action_space = gym.spaces.Box(0, 1, (12,))
 
         # Observations
-        self.observation_space = gym.spaces.Box(0, 1, (1 + 2 * 12 + 3 * 3,))
+        self.observation_space = gym.spaces.Box(0, 1, (1 + 2 * 13 + 3 * 3,))
 
         self._agent_ids = set(range(num_players))
 
@@ -288,8 +304,6 @@ class WarlockEnv(MultiAgentEnv):
         # assert len(actions[0]) == self.action_space.shape[0], actions
         # assert len(actions[1]) == self.action_space.shape[0], actions
 
-        old_state = self._game.state
-
         # Set player orders
         # TODO: Do this in one batch call
         for player_index, action in actions.items():
@@ -330,7 +344,8 @@ class WarlockEnv(MultiAgentEnv):
             # },
             {
                 i: 1
-                if terminated and new_state["healths"][index_to_entity_id[1 - i]]["current"] == 0
+                if terminated
+                and new_state["healths"][index_to_entity_id[1 - i]]["current"] == 0
                 else 0
                 for i in range(self.num_players)
             },

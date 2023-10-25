@@ -7,6 +7,16 @@ type ProjectileComponentHomingPart =
       homingTarget?: number | string;
     };
 
+type ProjectileComponentSwapPart =
+  | {
+      swap?: false;
+    }
+  | {
+      swap: true;
+      swapped?: boolean;
+    };
+
 export type ProjectileComponent = {
   damage: number;
-} & ProjectileComponentHomingPart;
+} & ProjectileComponentHomingPart &
+  ProjectileComponentSwapPart;

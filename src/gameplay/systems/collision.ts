@@ -109,7 +109,7 @@ export const collisionSystem: System<GameComponent> = (
       projectileId: number | string
     ) {
       // Change owner
-      if (projectileId in playerOwneds) {
+      if (projectileId in playerOwneds && !projectiles[projectileId]?.swap) {
         // TODO: Consider player id != entity id
         playerOwneds[projectileId].owningPlayerId =
           typeof shieldId === "string" ? parseInt(shieldId) : shieldId;
@@ -129,32 +129,42 @@ export const collisionSystem: System<GameComponent> = (
         );
       }
     }
+
+    function projectileResponse(projectileId: string, otherId: string) {
+      const projectile = projectiles[projectileId];
+      if (otherId in shields) {
+        shieldResponse(otherId, projectileId);
+      } else if (projectile.swap) {
+        // Swap
+        const projectileOwnerId = playerOwneds[projectileId]?.owningPlayerId;
+        if (projectileOwnerId in bodies && otherId in bodies) {
+          lifetimes[projectileId] = { remainingFrames: 0 };
+          [bodies[projectileOwnerId].location, bodies[otherId].location] = [
+            bodies[otherId].location,
+            bodies[projectileOwnerId].location,
+          ];
+          projectile.swapped = true;
+        }
+      } else {
+        // Generic projectile
+        lifetimes[projectileId] = { remainingFrames: 0 };
+        dealDamage(otherId, components, {
+          amount: projectile.damage,
+          knockbackDirection: normal ? pga.multiply(normal, -1) : undefined,
+        });
+      }
+    }
+
     // Projectile-Any damage and knockback
     const areEnemies =
       playerOwneds[idA] === undefined ||
       playerOwneds[idA]?.owningPlayerId !== playerOwneds[idB]?.owningPlayerId;
     if (areEnemies) {
       if (idA in projectiles) {
-        if (idB in shields) {
-          shieldResponse(idB, idA);
-        } else {
-          lifetimes[idA] = { remainingFrames: 0 };
-          dealDamage(idB, components, {
-            amount: projectiles[idA].damage,
-            knockbackDirection: normal,
-          });
-        }
+        projectileResponse(idA, idB);
       }
       if (idB in projectiles) {
-        if (idA in shields) {
-          shieldResponse(idA, idB);
-        } else {
-          lifetimes[idB] = { remainingFrames: 0 };
-          dealDamage(idA, components, {
-            amount: projectiles[idB].damage,
-            knockbackDirection: normal ? pga.multiply(normal, -1) : undefined,
-          });
-        }
+        projectileResponse(idB, idA);
       }
     }
   }

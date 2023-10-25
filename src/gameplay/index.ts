@@ -114,6 +114,11 @@ export const makeGame = ({ deltaTime, seed }: MakeGameOptions) => {
         target: "point",
         cooldown: 16,
       },
+      swap: {
+        id: "swap",
+        target: "point",
+        cooldown: 15.8,
+      },
       homing: {
         id: "homing",
         target: "point",

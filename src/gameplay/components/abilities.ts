@@ -24,6 +24,11 @@ export type AbilityTeleport = {
   target: "point";
 };
 
+export type AbilitySwap = {
+  id: "swap";
+  target: "point";
+};
+
 export type AbilityShield = {
   id: "shield";
   target: "none";
@@ -35,6 +40,7 @@ export type Ability = AbilityCommon &
     | AbilityShoot
     | AbilityHoming
     | AbilityTeleport
+    | AbilitySwap
     | AbilityShield
   );
 
@@ -50,4 +56,4 @@ type AbilityOfTargetGeneric<Ability, T> = Ability extends {
 // Doesn't work without using the generic version for some reason
 export type AbilityOfTarget<T> = AbilityOfTargetGeneric<Ability, T>;
 
-export type AbilitiesComponent = Record<AbilityId, Ability>;
+export type AbilitiesComponent = Partial<Record<AbilityId, Ability>>;
