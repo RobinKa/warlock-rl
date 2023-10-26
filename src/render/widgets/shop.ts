@@ -14,7 +14,7 @@ export function useShopWidget(
 
   const costTexts: Partial<Record<AbilityId, PIXI.Text>> = {};
 
-  function update({ shops }: GameComponent) {
+  function update({ shops, gameState }: GameComponent) {
     goldText.text = `Costs - Gold: ${shops[entityId].gold}G`;
 
     for (const [abilityId, cost] of Object.entries(shops[entityId].costs)) {
@@ -33,6 +33,8 @@ export function useShopWidget(
         shops[entityId].costs[abilityId as AbilityId]
       }G`;
     }
+
+    container.visible = gameState.state.type === "shop";
   }
 
   return { container, update };

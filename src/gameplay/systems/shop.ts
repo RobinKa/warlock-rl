@@ -30,7 +30,7 @@ export function shopSystem({ shops, abilities, gameState }: GameComponent) {
             continue;
           }
 
-          if (!(order.abilityId in abilities)) {
+          if (!(order.abilityId in playerAbilities)) {
             // Add the ability
             shop.gold -= cost;
             playerAbilities[order.abilityId] = abilityDefault;

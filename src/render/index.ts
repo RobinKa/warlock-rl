@@ -239,7 +239,6 @@ function startGame(replay?: GameComponent[]) {
     {
       const { container, update } = useShopWidget(playerId, (abilityId) => {
         buyAbility(playerId, abilityId, components);
-        console.log(components.shops[playerId]);
       });
       container.position.set(800, 100 + (playerId - 1000) * 400);
       uiContainer.addChild(container);
