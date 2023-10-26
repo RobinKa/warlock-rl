@@ -20,8 +20,9 @@ export function isAbilityReady(
 function abilityTeleport(
   entityId: string,
   target: pga.BladeE1 & pga.BladeE2,
-  { bodies }: GameComponent
+  { bodies, units }: GameComponent
 ) {
+  units[entityId].location = target
   bodies[entityId].location = target;
   bodies[entityId].velocity = pga.multiply(bodies[entityId].velocity, 0.8);
 }

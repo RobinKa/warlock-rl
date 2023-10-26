@@ -139,7 +139,14 @@ export const collisionSystem: System<GameComponent> = (
         const projectileOwnerId = playerOwneds[projectileId]?.owningPlayerId;
         if (projectileOwnerId in bodies && otherId in bodies) {
           lifetimes[projectileId] = { remainingFrames: 0 };
-          [bodies[projectileOwnerId].location, bodies[otherId].location] = [
+          [
+            bodies[projectileOwnerId].location,
+            bodies[otherId].location,
+            units[projectileOwnerId].location,
+            units[otherId].location,
+          ] = [
+            bodies[otherId].location,
+            bodies[projectileOwnerId].location,
             bodies[otherId].location,
             bodies[projectileOwnerId].location,
           ];
