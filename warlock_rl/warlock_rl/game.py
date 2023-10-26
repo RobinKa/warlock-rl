@@ -86,12 +86,14 @@ class Game:
         )
 
         self._state_history = []
+        self._logging = False
         self._state = None
         self._game_id = None
 
-    def start(self, num_players: int, seed: int | None):
+    def start(self, num_players: int, seed: int | None, logging: bool = True):
         if self._game_id is not None:
             self._state_history.clear()
+        self._logging = logging
 
         self._game_id = str(uuid.uuid4())
         print("Starting game", self._game_id, "with seed", seed)
@@ -106,10 +108,16 @@ class Game:
         return self._state
 
     @property
+    def logging(self):
+        return self._logging
+
+    @property
     def started(self):
         return self._game_id is not None
 
     def log_game(self):
+        assert self.logging
+
         # "/mnt", "e", "warlock_rl_logs",
         game_log_dir = os.path.join("..", "logs", f"{time.time_ns()}_{self._game_id}")
         print("Logging game to", os.path.abspath(game_log_dir))
@@ -119,11 +127,15 @@ class Game:
         ) as state_history_file:
             json.dump(self._state_history, state_history_file)
 
+        self._state_history.clear()
+        self._logging = False
+
     def _read_state(self):
         self._send_command(CLICommandGetComponents())
         output_raw = self._process.stdout.read(128_000)
         self._state = json.loads(output_raw)
-        self._state_history.append(self._state)
+        if self._logging:
+            self._state_history.append(self._state)
 
     def _send_command(self, command: CLICommand):
         self._process.stdin.write(f"{command.to_json()}\n".encode("utf-8"))

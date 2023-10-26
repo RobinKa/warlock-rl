@@ -331,10 +331,12 @@ class WarlockEnv(MultiAgentEnv):
     ) -> dict[str, np.ndarray]:
         super().reset(seed=seed, options=options)
 
-        if self._game.started:
+        if self._game.started and self._game.logging:
             self._game.log_game()
 
-        self._game.start(num_players=self.num_players, seed=seed)
+        self._game.start(
+            num_players=self.num_players, seed=seed, logging=np.random.random() < 0.01
+        )
 
         return self._make_obs(), {}
 
@@ -348,9 +350,6 @@ class WarlockEnv(MultiAgentEnv):
     def step(
         self, actions: dict[int, Sequence[float]]
     ) -> tuple[Any, SupportsFloat, bool, bool, dict[str, Any]]:
-        print(
-            f"{self._game._game_id} - Frame: {self._game.state['gameState']['frameNumber']}"
-        )
         if self.shopping:
             assert set(actions.keys()) == {"shop_0", "shop_1"}
             # Buy abilities
@@ -370,7 +369,6 @@ class WarlockEnv(MultiAgentEnv):
                 for player_id in self._game.state["players"].keys():
                     self._game.set_ready(player_id, True)
                 self._game.step(1)
-                print("Started round")
                 assert not self.shopping
 
             return (
@@ -399,7 +397,7 @@ class WarlockEnv(MultiAgentEnv):
                 self._game.step(steps=1)
                 new_state = self._game.state
 
-                terminated = new_state["gameState"]["round"] == 11 and self.shopping
+                terminated = new_state["gameState"]["round"] == MAX_ROUNDS and self.shopping
                 if terminated or self.shopping:
                     break
 
