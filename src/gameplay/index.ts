@@ -62,7 +62,7 @@ export const makeGame = ({ deltaTime, seed }: MakeGameOptions) => {
 
     const entityId = gameState.nextEntityId++;
 
-    players[entityId] = {};
+    players[entityId] = { ready: false };
 
     shops[entityId] = {
       gold: 20,

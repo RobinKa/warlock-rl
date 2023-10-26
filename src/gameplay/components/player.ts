@@ -1,1 +1,3 @@
-export type PlayerComponent = {};
+export type PlayerComponent = {
+  ready: boolean;
+};

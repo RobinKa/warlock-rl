@@ -237,9 +237,15 @@ function startGame(replay?: GameComponent[]) {
 
     // Shop
     {
-      const { container, update } = useShopWidget(playerId, (abilityId) => {
-        buyAbility(playerId, abilityId, components);
-      });
+      const { container, update } = useShopWidget(
+        playerId,
+        (abilityId) => {
+          buyAbility(playerId, abilityId, components);
+        },
+        () =>
+          (components.players[playerId].ready =
+            !components.players[playerId].ready)
+      );
       container.position.set(800, 100 + (playerId - 1000) * 400);
       uiContainer.addChild(container);
       widgets.push({ container, update });

@@ -21,7 +21,10 @@ function resetGame(components: GameComponent) {
 
   // Reset players
   // TODO: Can this be unified with the initial setup?
-  for (const playerId in players) {
+  for (const [playerId, player] of Object.entries(players)) {
+    // Player
+    player.ready = false;
+
     // Health
     healths[playerId].current = healths[playerId].maximum;
 
@@ -49,15 +52,17 @@ function resetGame(components: GameComponent) {
 }
 
 export function roundSystem(components: GameComponent) {
-  const { gameState, healths } = components;
+  const { gameState, players } = components;
 
   switch (gameState.state.type) {
     case "shop":
-      // Check if shop time is over and start the round
+      // Check if shop time is over or all players are ready
+      // and start the round
       if (
         gameState.frameNumber * gameState.deltaTime >
-        gameState.state.startFrame * gameState.deltaTime +
-          gameState.state.duration
+          gameState.state.startFrame * gameState.deltaTime +
+            gameState.state.duration ||
+        Object.values(players).every((player) => player.ready)
       ) {
         resetGame(components);
         components.arena = getDefaultArena(components);
