@@ -139,17 +139,20 @@ export const collisionSystem: System<GameComponent> = (
         const projectileOwnerId = playerOwneds[projectileId]?.owningPlayerId;
         if (projectileOwnerId in bodies && otherId in bodies) {
           lifetimes[projectileId] = { remainingFrames: 0 };
-          [
-            bodies[projectileOwnerId].location,
-            bodies[otherId].location,
-            units[projectileOwnerId].location,
-            units[otherId].location,
-          ] = [
-            bodies[otherId].location,
-            bodies[projectileOwnerId].location,
-            bodies[otherId].location,
-            bodies[projectileOwnerId].location,
-          ];
+          const projectileOwnerLocation = bodies[projectileOwnerId].location;
+          const otherLocation = bodies[otherId].location;
+
+          bodies[projectileOwnerId].location = otherLocation;
+          bodies[otherId].location = projectileOwnerLocation;
+
+          if (projectileOwnerId in units) {
+            units[projectileOwnerId].location = otherLocation;
+          }
+
+          if (otherId in units) {
+            units[otherId].location = projectileOwnerLocation;
+          }
+
           projectile.swapped = true;
         }
       } else {
