@@ -75,7 +75,7 @@ function startGame(replay?: GameComponent[]) {
           }
         }
       } else {
-        window.location.reload();
+        //window.location.reload();
       }
     };
 
@@ -269,8 +269,8 @@ function startGame(replay?: GameComponent[]) {
   // Rendering
   const bodyContainers: Record<string, PIXI.Container> = {};
   const REFERENCE_WIDTH = 5_000;
-  app.ticker.minFPS = 30;
-  app.ticker.maxFPS = 30;
+  app.ticker.minFPS = 240;
+  app.ticker.maxFPS = 240;
 
   function render() {
     // Update UI widgets

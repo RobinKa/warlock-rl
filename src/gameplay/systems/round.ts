@@ -52,7 +52,7 @@ function resetGame(components: GameComponent) {
 }
 
 export function roundSystem(components: GameComponent) {
-  const { gameState, players } = components;
+  const { gameState, players, gameEvents } = components;
 
   switch (gameState.state.type) {
     case "shop":
@@ -76,11 +76,15 @@ export function roundSystem(components: GameComponent) {
     case "round":
       // Check if round is over and start shop time
       const totalPlayers = Object.keys(players).length;
-      const livingPlayers = getLivingPlayerIds(components).length;
+      const livingPlayerIds = getLivingPlayerIds(components);
       if (
-        (totalPlayers === 1 && livingPlayers === 0) ||
-        (totalPlayers > 1 && livingPlayers <= 1)
+        (totalPlayers === 1 && livingPlayerIds.length === 0) ||
+        (totalPlayers > 1 && livingPlayerIds.length <= 1)
       ) {
+        components.gameEvents.events.push({
+          type: "roundOver",
+          winners: livingPlayerIds,
+        });
         resetGame(components);
         for (const shop of Object.values(components.shops)) {
           shop.gold += components.gameState.goldPerRound;

@@ -12,9 +12,7 @@ from ray.tune import CLIReporter
 
 from warlock_rl.envs import WarlockEnv
 
-WIN_RATE_THRESHOLD = 0.94
-
-
+WIN_RATE_THRESHOLD = 9
 
 
 class SelfPlayCallback(DefaultCallbacks):
@@ -26,17 +24,19 @@ class SelfPlayCallback(DefaultCallbacks):
         self.last_changed_iter = 0
 
     def on_train_result(self, *, algorithm, result, **kwargs):
-        win_rate = result["sampler_results"]["policy_reward_mean"]["main"]
-
-        result["win_rate"] = win_rate
         result["league_size"] = self.current_opponent + 2
 
+        win_rate = result["sampler_results"]["policy_reward_mean"].get("main", -1)
+        result["win_rate"] = win_rate
         print(f"Iter={algorithm.iteration} win-rate={win_rate}")
 
-    def on_evaluate_end(self, *, algorithm: Algorithm, evaluation_metrics: dict, **kwargs):
+    def on_evaluate_end(
+        self, *, algorithm: Algorithm, evaluation_metrics: dict, **kwargs
+    ):
         result = evaluation_metrics["evaluation"]
         win_rate = result["sampler_results"]["policy_reward_mean"]["main"]
         print(f"Evaluation Iter={algorithm.iteration} win-rate={win_rate} -> ", end="")
+
         # If win rate is good -> Snapshot current policy and play against
         # it next, keeping the snapshot fixed and only improving the "main"
         # policy.
@@ -53,30 +53,57 @@ class SelfPlayCallback(DefaultCallbacks):
             # to play against any of the previously played policies
             # (excluding "random").
             def policy_mapping_fn(agent_id, episode, worker, **kwargs):
-                # agent_id = [0|1] -> policy depends on episode ID
-                # This way, we make sure that both policies sometimes play
-                # (start player) and sometimes agent1 (player to move 2nd).
+                if isinstance(agent_id, int):
+                    return (
+                        "main"
+                        if agent_id == 0
+                        else "main_v{}".format(
+                            np.random.choice(list(range(1, self.current_opponent + 1)))
+                        )
+                    )
                 return (
                     "main"
-                    if agent_id == 0
-                    else "main_v{}".format(
+                    if agent_id == "shop_0"
+                    else "main_v{}_shop".format(
                         np.random.choice(list(range(1, self.current_opponent + 1)))
                     )
                 )
 
             main_policy = algorithm.get_policy("main")
+            main_shop_policy = algorithm.get_policy("main_shop")
             if algorithm.config._enable_learner_api:
                 new_policy = algorithm.add_policy(
                     policy_id=new_pol_id,
                     policy_cls=type(main_policy),
                     policy_mapping_fn=policy_mapping_fn,
                     module_spec=SingleAgentRLModuleSpec.from_module(main_policy.model),
+                    action_space=WarlockEnv.round_action_space,
+                    observation_space=WarlockEnv.round_observation_space,
+                )
+                new_shop_policy = algorithm.add_policy(
+                    policy_id=new_pol_id + "_shop",
+                    policy_cls=type(main_shop_policy),
+                    policy_mapping_fn=policy_mapping_fn,
+                    module_spec=SingleAgentRLModuleSpec.from_module(
+                        main_shop_policy.model
+                    ),
+                    action_space=WarlockEnv.shop_action_space,
+                    observation_space=WarlockEnv.shop_observation_space,
                 )
             else:
                 new_policy = algorithm.add_policy(
                     policy_id=new_pol_id,
                     policy_cls=type(main_policy),
                     policy_mapping_fn=policy_mapping_fn,
+                    action_space=WarlockEnv.round_action_space,
+                    observation_space=WarlockEnv.round_observation_space,
+                )
+                new_shop_policy = algorithm.add_policy(
+                    policy_id=new_pol_id + "_shop",
+                    policy_cls=type(main_shop_policy),
+                    policy_mapping_fn=policy_mapping_fn,
+                    action_space=WarlockEnv.shop_action_space,
+                    observation_space=WarlockEnv.shop_observation_space,
                 )
 
             # Set the weights of the new policy to the main policy.
@@ -84,6 +111,8 @@ class SelfPlayCallback(DefaultCallbacks):
             # remain fixed.
             main_state = main_policy.get_state()
             new_policy.set_state(main_state)
+            main_shop_state = main_shop_policy.get_state()
+            new_shop_policy.set_state(main_shop_state)
             # We need to sync the just copied local weights (from main policy)
             # to all the remote workers as well.
             print("good enough; updating model ...")
@@ -94,7 +123,9 @@ class SelfPlayCallback(DefaultCallbacks):
 
 
 def policy_mapping_fn(agent_id, episode, worker, **kwargs):
-    return "main" if agent_id == 0 else "random"
+    if isinstance(agent_id, int):
+        return "main" if agent_id == 0 else "random"
+    return "main_shop" if agent_id == "shop_0" else "random_shop"
 
 
 algo = (
@@ -109,22 +140,23 @@ algo = (
     #     torch_compile_learner_dynamo_mode="default",
     # )
     .rollouts(
-        num_rollout_workers=32,
+        # num_rollout_workers=32,
+        num_rollout_workers=8,
         num_envs_per_worker=2,
-        rollout_fragment_length=512,
-        # rollout_fragment_length=44,
+        # rollout_fragment_length=512,
+        rollout_fragment_length=44,
     )
     .resources(
         # num_gpus=1,
         # num_gpus_per_learner_worker=1,
         # num_gpus_per_worker=0.03,
-        num_cpus_per_worker=0.95,
+        num_cpus_per_worker=0.9,
     )
     .training(
         # _enable_learner_api=False,
         # clip_param=0.1,
         model={
-            "fcnet_hiddens": [64, 64],
+            "fcnet_hiddens": [64],
             # "fcnet_hiddens": [128, 128],
             # "fcnet_hiddens": [64],
             # "use_lstm": True,
@@ -133,38 +165,74 @@ algo = (
         },
         # train_batch_size=3200,
         # sgd_minibatch_size=64,
-        # train_batch_size=44*32*2,
-        train_batch_size=32768,
-        sgd_minibatch_size=32768,
+        sgd_minibatch_size=32,
+        train_batch_size=44 * 8 * 2,
+        # train_batch_size=32768,
+        # sgd_minibatch_size=32768,
         # lr=5e-5,
-        # num_sgd_iter=4,
+        num_sgd_iter=4,
         # lr_schedule=[[0, 8e-5], [20_000, 4e-5], [1_200_000, 3e-5]],
     )
     .evaluation(
-        evaluation_interval=50,
-        evaluation_duration=50,
+        evaluation_interval=100,
+        evaluation_duration=10,
         # evaluation_parallel_to_training=True,
         # evaluation_num_workers=4,
     )
     .multi_agent(
         policies={
-            "main": PolicySpec(),
-            "random": PolicySpec(policy_class=RandomPolicy),
+            "main": PolicySpec(
+                action_space=WarlockEnv.round_action_space,
+                observation_space=WarlockEnv.round_observation_space,
+            ),
+            "main_shop": PolicySpec(
+                action_space=WarlockEnv.shop_action_space,
+                observation_space=WarlockEnv.shop_observation_space,
+            ),
+            "random": PolicySpec(
+                policy_class=RandomPolicy,
+                action_space=WarlockEnv.round_action_space,
+                observation_space=WarlockEnv.round_observation_space,
+            ),
+            "random_shop": PolicySpec(
+                policy_class=RandomPolicy,
+                action_space=WarlockEnv.shop_action_space,
+                observation_space=WarlockEnv.shop_observation_space,
+            ),
         },
         policy_mapping_fn=policy_mapping_fn,
-        policies_to_train=["main"],
+        policies_to_train=["main", "main_shop"],
     )
     .rl_module(
         # _enable_rl_module_api=False,
         rl_module_spec=MultiAgentRLModuleSpec(
             module_specs={
-                "main": SingleAgentRLModuleSpec(),
-                "random": SingleAgentRLModuleSpec(module_class=RandomRLModule),
+                "main": SingleAgentRLModuleSpec(
+                    action_space=WarlockEnv.round_action_space,
+                    observation_space=WarlockEnv.round_observation_space,
+                ),
+                "main_shop": SingleAgentRLModuleSpec(
+                    action_space=WarlockEnv.shop_action_space,
+                    observation_space=WarlockEnv.shop_observation_space,
+                ),
+                "random": SingleAgentRLModuleSpec(
+                    module_class=RandomRLModule,
+                    action_space=WarlockEnv.round_action_space,
+                    observation_space=WarlockEnv.round_observation_space,
+                ),
+                "random_shop": SingleAgentRLModuleSpec(
+                    module_class=RandomRLModule,
+                    action_space=WarlockEnv.shop_action_space,
+                    observation_space=WarlockEnv.shop_observation_space,
+                ),
             }
         ),
     )
     .callbacks(SelfPlayCallback)
-    .environment(env=WarlockEnv)
+    .environment(
+        env=WarlockEnv,
+        disable_env_checking=True,  # fails with multiagent
+    )
     # .build()
 )
 

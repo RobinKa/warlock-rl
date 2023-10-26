@@ -6,7 +6,12 @@ export type GameEventAbilityUsed = {
   abilityId: AbilityId;
 };
 
-export type GameEvent = GameEventAbilityUsed;
+export type GameEventRoundOver = {
+  type: "roundOver";
+  winners: number[];
+};
+
+export type GameEvent = GameEventAbilityUsed | GameEventRoundOver;
 
 export type GameEventsComponent = {
   events: GameEvent[];

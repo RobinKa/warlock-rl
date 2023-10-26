@@ -28,7 +28,7 @@ async function readReplay(path: string): Promise<GameComponent[]> {
   throw new Error("Unreachable");
 }
 
-const LOG_DIR = "/mnt/e/warlock_rl_logs/logs/";
+const LOG_DIR = "./logs/"; //"/mnt/e/warlock_rl_logs/logs/";
 
 export default new Router()
   .get("/replay", async () => {
