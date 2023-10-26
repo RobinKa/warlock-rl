@@ -7,12 +7,15 @@ import { GameStateComponent } from "./gamestate";
 import { HealthComponent } from "./health";
 import { LifetimeComponent } from "./lifetime";
 import { OrderComponent } from "./order";
+import { PlayerComponent } from "./player";
 import { PlayerOwnedComponent } from "./playerowned";
 import { ProjectileComponent } from "./projectile";
 import { ShieldComponent } from "./shield";
+import { ShopComponent } from "./shop";
 import { UnitComponent } from "./unit";
 
 export type GameComponent = {
+  shops: EntityComponents<ShopComponent>;
   bodies: EntityComponents<BodyComponent>;
   gameState: SingletonComponent<GameStateComponent>;
   gameEvents: SingletonComponent<GameEventsComponent>;
@@ -25,4 +28,5 @@ export type GameComponent = {
   abilities: EntityComponents<AbilitiesComponent>;
   units: EntityComponents<UnitComponent>;
   shields: EntityComponents<ShieldComponent>;
+  players: EntityComponents<PlayerComponent>;
 };

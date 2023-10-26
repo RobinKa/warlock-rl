@@ -32,7 +32,7 @@ export const movementSystem = ({ bodies, gameState, units }: GameComponent) => {
       if (turnToTarget(body, unit.state.target, gameState)) {
         const bodyToTarget = pga.sub(unit.state.target, body.location);
         const dstSq = pga.innerProduct(bodyToTarget, bodyToTarget).scalar;
-        const dstPerFrame = gameState.moveSpeed * gameState.deltaTime;
+        const dstPerFrame = unit.moveSpeed * gameState.deltaTime;
 
         if (dstSq <= dstPerFrame * dstPerFrame) {
           body.location = unit.state.target;

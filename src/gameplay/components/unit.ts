@@ -25,4 +25,5 @@ export type UnitComponent = {
   healthRegeneration: number;
   walkVelocity: pga.BladeE1 & pga.BladeE2
   location: pga.BladeE1 & pga.BladeE2
+  moveSpeed: number;
 };

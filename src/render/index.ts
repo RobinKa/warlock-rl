@@ -6,9 +6,10 @@ import * as PIXI from "pixi.js";
 import { useKeyboard } from "@/common/keyboard";
 import { makeGame } from "@/gameplay";
 import { GameComponent } from "@/gameplay/components";
-import { Ability } from "@/gameplay/components/abilities";
-import { GameStateComponent } from "@/gameplay/components/gamestate";
+import { buyAbility } from "@/gameplay/shop";
 import { gameSystem } from "@/gameplay/systems";
+import { useCooldownWidget } from "./widgets/cooldown";
+import { useShopWidget } from "./widgets/shop";
 
 (async function () {
   const isReplay = window.location.hash.startsWith("#replay");
@@ -33,52 +34,6 @@ import { gameSystem } from "@/gameplay/systems";
     startGame();
   }
 })();
-
-function useAbilityCooldowns(
-  entityId: number,
-  { abilities, gameState }: GameComponent
-) {
-  const container = new PIXI.Container();
-  const abilityTexts: [PIXI.Text, Ability][] = [];
-
-  function getAbilityCooldown(ability: Ability, gameState: GameStateComponent) {
-    if (ability.lastUsedFrame === undefined) {
-      return 0;
-    }
-
-    return Math.max(
-      0,
-      ability.lastUsedFrame * gameState.deltaTime +
-        ability.cooldown -
-        gameState.frameNumber * gameState.deltaTime
-    );
-  }
-
-  for (const ability of Object.values(abilities[entityId])) {
-    const abilityText = new PIXI.Text(
-      `${ability.id}: ${getAbilityCooldown(ability, gameState).toFixed(1)}s`,
-      {
-        fontSize: 20,
-      }
-    );
-
-    abilityText.position.set(0, Object.keys(abilityTexts).length * 20);
-    abilityText.anchor.set(0.5, 1.0);
-    container.addChild(abilityText);
-    abilityTexts.push([abilityText, ability]);
-  }
-
-  function update({ abilities, gameState }: GameComponent) {
-    for (const [abilityText, ability] of abilityTexts) {
-      abilityText.text = `${ability.id}: ${getAbilityCooldown(
-        abilities[entityId][ability.id],
-        gameState
-      ).toFixed(1)}s`;
-    }
-  }
-
-  return { container, update };
-}
 
 function startGame(replay?: GameComponent[]) {
   const isReplay = replay !== undefined;
@@ -131,7 +86,6 @@ function startGame(replay?: GameComponent[]) {
       components: c,
       addPlayer,
       addPillar,
-      randomRange,
     } = makeGame({
       deltaTime: 1 / 30,
       seed: 0,
@@ -262,15 +216,50 @@ function startGame(replay?: GameComponent[]) {
     clearKeyStates();
   }
 
-  // Cooldown UI
-  const { container: cooldownContainerA, update: updateCooldownsA } =
-    useAbilityCooldowns(1000, components);
-  const { container: cooldownContainerB, update: updateCooldownsB } =
-    useAbilityCooldowns(1001, components);
-  cooldownContainerA.position.set(100, 100);
-  cooldownContainerB.position.set(100, 500);
-  app.stage.addChild(cooldownContainerA);
-  app.stage.addChild(cooldownContainerB);
+  // UI Widgets
+  const widgets: {
+    container: PIXI.Container;
+    update: (components: GameComponent) => void;
+  }[] = [];
+
+  const uiContainer = new PIXI.Container();
+  uiContainer.zIndex = 10;
+  app.stage.addChild(uiContainer);
+
+  for (const playerId of [1000, 1001]) {
+    // Cooldown
+    {
+      const { container, update } = useCooldownWidget(playerId);
+      container.position.set(100, 100 + (playerId - 1000) * 400);
+      uiContainer.addChild(container);
+      widgets.push({ container, update });
+    }
+
+    // Shop
+    {
+      const { container, update } = useShopWidget(playerId, (abilityId) => {
+        buyAbility(playerId, abilityId, components);
+        console.log(components.shops[playerId]);
+      });
+      container.position.set(800, 100 + (playerId - 1000) * 400);
+      uiContainer.addChild(container);
+      widgets.push({ container, update });
+    }
+  }
+
+  // Game state text (shop time, round time etc.)
+  const gameStateText = new PIXI.Text("Shop", {
+    align: "center",
+    fontSize: 50,
+    fill: "white",
+    dropShadow: true,
+    dropShadowColor: "black",
+    dropShadowDistance: 0,
+    dropShadowBlur: 5,
+  });
+  gameStateText.anchor.set(0.5, 0.0);
+  gameStateText.position.set(app.view.width / 2, 50);
+  app.stage.addChild(gameStateText);
 
   // Rendering
   const bodyContainers: Record<string, PIXI.Container> = {};
@@ -279,8 +268,8 @@ function startGame(replay?: GameComponent[]) {
   app.ticker.maxFPS = 30;
 
   function render() {
-    updateCooldownsA(components);
-    updateCooldownsB(components);
+    // Update UI widgets
+    widgets.forEach((widget) => widget.update(components));
 
     // Default scale so that vertical is REFERENCE_WIDTH
     const scale = (zoom * app.view.width) / REFERENCE_WIDTH;
@@ -289,6 +278,25 @@ function startGame(replay?: GameComponent[]) {
       app.view.width / 2,
       app.view.height / 2
     );
+
+    // Update game state text
+    switch (components.gameState.state.type) {
+      case "shop":
+        gameStateText.text = `Shop - ${(
+          components.gameState.state.duration -
+          (components.gameState.frameNumber -
+            components.gameState.state.startFrame) *
+            components.gameState.deltaTime
+        ).toFixed(0)}s`;
+        break;
+      case "round":
+        gameStateText.text = `Round ${components.gameState.round} - ${(
+          (components.gameState.frameNumber -
+            components.gameState.state.startFrame) *
+          components.gameState.deltaTime
+        ).toFixed(0)}s`;
+        break;
+    }
 
     // Draw arena
     if (arena.radius !== components.arena.radius) {

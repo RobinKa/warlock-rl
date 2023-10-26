@@ -1,4 +1,8 @@
+import { getAbilityDefaults } from "./abilities";
+import { getDefaultArena } from "./arena";
 import { GameComponent } from "./components";
+import { AbilityId } from "./components/abilities";
+import { randomFloat } from "./random";
 import { gameSystem } from "./systems";
 
 export type MakeGameOptions = {
@@ -11,20 +15,22 @@ export const makeGame = ({ deltaTime, seed }: MakeGameOptions) => {
     gameState: {
       deltaTime,
       frameNumber: 0,
-      moveSpeed: 210,
       nextEntityId: 1_000,
       randomState: seed,
+      goldPerRound: 10,
+      shopTime: 15,
+      state: {
+        type: "shop",
+        startFrame: 0,
+        duration: 30,
+      },
+      round: 0,
     },
     gameEvents: {
       events: [],
     },
-    arena: {
-      radius: 32 * 15, //20, (13 + 1 per player)
-      lavaDamage: 10,
-      nextShrinkTime: 10,
-      shrinkInterval: 10,
-      shrinkRadius: 32,
-    },
+    arena: getDefaultArena(),
+    players: {},
     bodies: {},
     healths: {},
     lifetimes: {},
@@ -34,30 +40,18 @@ export const makeGame = ({ deltaTime, seed }: MakeGameOptions) => {
     abilities: {},
     units: {},
     shields: {},
+    shops: {},
   };
 
   function step() {
     gameSystem(components);
   }
 
-  function randomInt() {
-    let t = (components.gameState.randomState += 0x6d2b79f5);
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return (t ^ (t >>> 14)) >>> 0;
-  }
-
-  function randomRange(min: number, max: number) {
-    return min + (randomInt() % (max - min));
-  }
-
-  function randomFloat() {
-    return randomInt() / 4294967296;
-  }
-
   function addPlayer(): number {
     const {
       gameState,
+      players,
+      shops,
       bodies,
       units,
       healths,
@@ -68,9 +62,24 @@ export const makeGame = ({ deltaTime, seed }: MakeGameOptions) => {
 
     const entityId = gameState.nextEntityId++;
 
+    players[entityId] = {};
+
+    shops[entityId] = {
+      gold: 20,
+      costs: {
+        shoot: 5,
+        scourge: 10,
+        teleport: 10,
+        swap: 10,
+        homing: 10,
+        shield: 10,
+      },
+      orders: [],
+    };
+
     const location = {
-      e1: randomFloat() * 500 - 250,
-      e2: randomFloat() * 500 - 250,
+      e1: randomFloat(components) * 500 - 250,
+      e2: randomFloat(components) * 500 - 250,
     };
 
     bodies[entityId] = {
@@ -90,6 +99,7 @@ export const makeGame = ({ deltaTime, seed }: MakeGameOptions) => {
       healthRegeneration: 0.5,
       location: { e1: 0, e2: 0 },
       walkVelocity: { e1: 0, e2: 0 },
+      moveSpeed: 210,
     };
 
     healths[entityId] = {
@@ -102,41 +112,12 @@ export const makeGame = ({ deltaTime, seed }: MakeGameOptions) => {
       owningPlayerId: entityId,
     };
 
-    abilities[entityId] = {
-      shoot: {
-        id: "shoot",
-        target: "point",
-        cooldown: 3,
-        castTime: 0.2,
-      },
-      teleport: {
-        id: "teleport",
-        target: "point",
-        cooldown: 16,
-      },
-      swap: {
-        id: "swap",
-        target: "point",
-        cooldown: 15.8,
-      },
-      homing: {
-        id: "homing",
-        target: "point",
-        cooldown: 15,
-        castTime: 0.2,
-      },
-      scourge: {
-        id: "scourge",
-        target: "none",
-        cooldown: 3,
-        castTime: 0.9,
-      },
-      shield: {
-        id: "shield",
-        target: "none",
-        cooldown: 14,
-      },
-    };
+    const starterAbilities: Set<AbilityId> = new Set(["scourge", "shoot"]);
+    abilities[entityId] = Object.fromEntries(
+      Object.entries(getAbilityDefaults()).filter(([abilityId, ability]) =>
+        starterAbilities.has(abilityId as AbilityId)
+      )
+    );
 
     return entityId;
   }
@@ -147,8 +128,8 @@ export const makeGame = ({ deltaTime, seed }: MakeGameOptions) => {
     const entityId = gameState.nextEntityId++;
 
     const location = {
-      e1: randomFloat() * 500 - 250,
-      e2: randomFloat() * 500 - 250,
+      e1: randomFloat(components) * 500 - 250,
+      e2: randomFloat(components) * 500 - 250,
     };
 
     bodies[entityId] = {
@@ -175,8 +156,5 @@ export const makeGame = ({ deltaTime, seed }: MakeGameOptions) => {
     step,
     addPlayer,
     addPillar,
-    randomInt,
-    randomRange,
-    randomFloat,
   };
 };

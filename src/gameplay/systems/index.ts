@@ -8,6 +8,8 @@ import { lifetimeSystem } from "./lifetime";
 import { movementSystem } from "./movement";
 import { orderSystem } from "./order";
 import { physicsSystem } from "./physics";
+import { roundSystem } from "./round";
+import { shopSystem } from "./shop";
 
 export const gameSystem: System<GameComponent> = (
   components: GameComponent
@@ -15,6 +17,7 @@ export const gameSystem: System<GameComponent> = (
   components.gameEvents.events.length = 0;
 
   const systems: System<GameComponent>[] = [
+    shopSystem,
     orderSystem,
     abilitySystem,
     movementSystem,
@@ -22,6 +25,7 @@ export const gameSystem: System<GameComponent> = (
     physicsSystem,
     lavaSystem,
     collisionSystem,
+    roundSystem,
     lifetimeSystem,
   ];
 
