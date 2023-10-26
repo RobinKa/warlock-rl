@@ -92,7 +92,9 @@ def state_to_obs(
     for i, (projectile_id, _) in enumerate(sorted_projectiles[: len(projectile_obs)]):
         projectile_obs[i] = get_projectile_observations(projectile_id)
 
-    elapsed_time = state["gameState"]["deltaTime"] * state["gameState"]["frameNumber"]
+    elapsed_time = state["gameState"]["deltaTime"] * (
+        state["gameState"]["frameNumber"] - state["gameState"]["state"]["startFrame"]
+    )
 
     observations = (
         [
@@ -138,25 +140,6 @@ def calculate_reward(old_state, new_state, self_player_index, other_player_index
     # Reward for teleporting on platform.
     # Negative for self to avoid non-zero-sum reward.
     # TODO: Anneal this down?
-
-    def teleport_reward(entity_id: str):
-        if any(
-            event["type"] == "abilityUsed"
-            and event["entityId"] == entity_id
-            and event["abilityId"] == "teleport"
-            for event in new_state["gameEvents"]["events"]
-        ):
-            distance_to_center_sq = (
-                new_state["bodies"][entity_id]["location"]["e1"] ** 2
-                + new_state["bodies"][entity_id]["location"]["e2"] ** 2
-            )
-            arena_radius_sq = new_state["arena"]["radius"] ** 2
-            if distance_to_center_sq <= arena_radius_sq:
-                return 0.2
-        return 0.0
-
-    # reward += teleport_reward(self_entity_id)
-    # reward -= teleport_reward(other_entity_id)
 
     return reward
 
@@ -333,15 +316,6 @@ class WarlockEnv(MultiAgentEnv):
 
         return (
             self._make_obs(),
-            # {
-            #     i: calculate_reward(
-            #         old_state=old_state,
-            #         new_state=new_state,
-            #         self_player_index=i,
-            #         other_player_index=1 - i,
-            #     )
-            #     for i in range(self.num_players)
-            # },
             {
                 i: 1
                 if terminated

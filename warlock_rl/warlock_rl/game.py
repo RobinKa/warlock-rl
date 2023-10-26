@@ -50,6 +50,22 @@ class CLICommandSetOrder:
 
 @dataclass_json
 @dataclass
+class CLICommandSetReady:
+    entityId: int
+    ready: bool
+    type: Literal["setReady"] = "setReady"
+
+
+@dataclass_json
+@dataclass
+class CLICommandBuyAbility:
+    entityId: int
+    abilityId: int
+    type: Literal["buyAbility"] = "buyAbility"
+
+
+@dataclass_json
+@dataclass
 class CLICommandGetComponents:
     type: Literal["getComponents"] = "getComponents"
 
@@ -88,19 +104,18 @@ class Game:
     @property
     def state(self):
         return self._state
-    
+
     @property
     def started(self):
         return self._game_id is not None
 
     def log_game(self):
-        game_log_dir = os.path.join("/mnt", "e", "warlock_rl_logs", "logs", f"{time.time_ns()}_{self._game_id}")
+        # "/mnt", "e", "warlock_rl_logs",
+        game_log_dir = os.path.join("..", "logs", f"{time.time_ns()}_{self._game_id}")
         print("Logging game to", os.path.abspath(game_log_dir))
         os.makedirs(game_log_dir, exist_ok=True)
         with gzip.open(
-            os.path.join(game_log_dir, "state_history.json.gz"),
-            "wt",
-            encoding="utf-8"
+            os.path.join(game_log_dir, "state_history.json.gz"), "wt", encoding="utf-8"
         ) as state_history_file:
             json.dump(self._state_history, state_history_file)
 
@@ -118,6 +133,19 @@ class Game:
             CLICommandSetOrder(
                 entityId=entity_id,
                 order=order,
+            )
+        )
+
+    def buy_ability(self, entity_id: int, ability_id: str):
+        self._send_command(
+            CLICommandBuyAbility(entityId=entity_id, abilityId=ability_id)
+        )
+
+    def set_ready(self, entity_id: int, ready: bool):
+        self._send_command(
+            CLICommandSetReady(
+                entityId=entity_id,
+                ready=ready,
             )
         )
 

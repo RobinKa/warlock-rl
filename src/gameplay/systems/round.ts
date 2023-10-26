@@ -74,8 +74,13 @@ export function roundSystem(components: GameComponent) {
       }
       break;
     case "round":
-      // Check if all players are dead and start shop time
-      if (getLivingPlayerIds(components).length <= 1) {
+      // Check if round is over and start shop time
+      const totalPlayers = Object.keys(players).length;
+      const livingPlayers = getLivingPlayerIds(components).length;
+      if (
+        (totalPlayers === 1 && livingPlayers === 0) ||
+        (totalPlayers > 1 && livingPlayers <= 1)
+      ) {
         resetGame(components);
         for (const shop of Object.values(components.shops)) {
           shop.gold += components.gameState.goldPerRound;

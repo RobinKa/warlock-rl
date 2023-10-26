@@ -35,7 +35,7 @@ export const movementSystem = ({ bodies, gameState, units }: GameComponent) => {
         const dstPerFrame = unit.moveSpeed * gameState.deltaTime;
 
         if (dstSq <= dstPerFrame * dstPerFrame) {
-          body.location = unit.state.target;
+          unit.location = unit.state.target;
           unit.state = { type: "idle" };
         } else {
           const direction = pga.div(bodyToTarget, Math.sqrt(dstSq));

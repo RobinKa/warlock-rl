@@ -1,5 +1,7 @@
 import { makeGame } from "@/gameplay";
+import { AbilityId } from "@/gameplay/components/abilities";
 import { Order } from "@/gameplay/components/order";
+import { buyAbility } from "@/gameplay/shop";
 
 let game: ReturnType<typeof makeGame> | undefined = undefined;
 
@@ -21,6 +23,18 @@ export type CLICommandSetOrder = {
   order: Order;
 };
 
+export type CLICommandSetReady = {
+  type: "setReady";
+  entityId: number;
+  ready: boolean;
+};
+
+export type CLICommandBuyAbility = {
+  type: "buyAbility";
+  entityId: number;
+  abilityId: AbilityId;
+};
+
 export type CLICommandGetComponents = {
   type: "getComponents";
 };
@@ -29,6 +43,8 @@ export type CLICommand =
   | CLICommandStartGame
   | CLICommandStep
   | CLICommandSetOrder
+  | CLICommandSetReady
+  | CLICommandBuyAbility
   | CLICommandGetComponents;
 
 for await (const line of console) {
@@ -58,6 +74,18 @@ for await (const line of console) {
         throw new Error("Game not started");
       }
       game.components.orders[command.entityId].order = command.order;
+      break;
+    case "setReady":
+      if (!game) {
+        throw new Error("Game not started");
+      }
+      game.components.players[command.entityId].ready = command.ready;
+      break;
+    case "buyAbility":
+      if (!game) {
+        throw new Error("Game not started");
+      }
+      buyAbility(command.entityId, command.abilityId, game.components);
       break;
     case "getComponents":
       if (!game) {
