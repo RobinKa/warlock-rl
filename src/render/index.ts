@@ -49,6 +49,7 @@ function startGame(replay?: GameComponent[]) {
   if (isReplay) {
     replayIndex = 0;
     components = replay[0] as GameComponent;
+    let reloading = false;
 
     advanceReplay = () => {
       const previousComponents = replay[replayIndex];
@@ -75,7 +76,10 @@ function startGame(replay?: GameComponent[]) {
           }
         }
       } else {
-        //window.location.reload();
+        if (!reloading) {
+          reloading = true;
+          window.location.reload();
+        }
       }
     };
 
