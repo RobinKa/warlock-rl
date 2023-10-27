@@ -10,9 +10,9 @@ from ray.rllib.examples.rl_module.random_rl_module import RandomRLModule
 from ray.rllib.policy.policy import PolicySpec
 from ray.tune import CLIReporter
 
-from warlock_rl.envs import WarlockEnv
+from warlock_rl.envs import MAX_ROUNDS, WarlockEnv
 
-WIN_RATE_THRESHOLD = 9
+WIN_RATE_THRESHOLD = 0.9
 
 
 class SelfPlayCallback(DefaultCallbacks):
@@ -26,7 +26,9 @@ class SelfPlayCallback(DefaultCallbacks):
     def on_train_result(self, *, algorithm, result, **kwargs):
         result["league_size"] = self.current_opponent + 2
 
-        win_rate = result["sampler_results"]["policy_reward_mean"].get("main", -1)
+        win_rate = (
+            result["sampler_results"]["policy_reward_mean"].get("main", -1) / MAX_ROUNDS
+        )
         result["win_rate"] = win_rate
         print(f"Iter={algorithm.iteration} win-rate={win_rate}")
 
@@ -34,7 +36,7 @@ class SelfPlayCallback(DefaultCallbacks):
         self, *, algorithm: Algorithm, evaluation_metrics: dict, **kwargs
     ):
         result = evaluation_metrics["evaluation"]
-        win_rate = result["sampler_results"]["policy_reward_mean"]["main"]
+        win_rate = result["sampler_results"]["policy_reward_mean"]["main"] / MAX_ROUNDS
         print(f"Evaluation Iter={algorithm.iteration} win-rate={win_rate} -> ", end="")
 
         # If win rate is good -> Snapshot current policy and play against
@@ -62,7 +64,7 @@ class SelfPlayCallback(DefaultCallbacks):
                         )
                     )
                 return (
-                    "main"
+                    "main_shop"
                     if agent_id == "shop_0"
                     else "main_v{}_shop".format(
                         np.random.choice(list(range(1, self.current_opponent + 1)))
@@ -117,6 +119,7 @@ class SelfPlayCallback(DefaultCallbacks):
             # to all the remote workers as well.
             print("good enough; updating model ...")
             algorithm.workers.sync_weights(timeout_seconds=10)
+            algorithm.evaluation_workers.sync_weights(timeout_seconds=10)
             print("updated!")
         else:
             print("not good enough; will keep learning ...")
@@ -141,8 +144,8 @@ algo = (
     # )
     .rollouts(
         # num_rollout_workers=32,
-        num_rollout_workers=8,
-        num_envs_per_worker=2,
+        num_rollout_workers=16,
+        num_envs_per_worker=1,
         # rollout_fragment_length=512,
         rollout_fragment_length=44,
     )
@@ -165,12 +168,12 @@ algo = (
         },
         # train_batch_size=3200,
         # sgd_minibatch_size=64,
-        sgd_minibatch_size=32,
+        sgd_minibatch_size=64,
         train_batch_size=44 * 8 * 2,
-        # train_batch_size=32768,
-        # sgd_minibatch_size=32768,
+        # train_batch_size=8192,
+        # sgd_minibatch_size=8192,
         # lr=5e-5,
-        num_sgd_iter=4,
+        # num_sgd_iter=4,
         # lr_schedule=[[0, 8e-5], [20_000, 4e-5], [1_200_000, 3e-5]],
     )
     .evaluation(

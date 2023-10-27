@@ -8,7 +8,7 @@ from warlock_rl.game import Game
 
 OBS_LOC_SCALE = 2_000
 ROUND_TIME_SCALE = 180
-MAX_ROUNDS = 11
+MAX_ROUNDS = 3
 
 index_to_entity_id = {
     0: "1000",
@@ -397,7 +397,9 @@ class WarlockEnv(MultiAgentEnv):
                 self._game.step(steps=1)
                 new_state = self._game.state
 
-                terminated = new_state["gameState"]["round"] == MAX_ROUNDS and self.shopping
+                terminated = (
+                    new_state["gameState"]["round"] == MAX_ROUNDS and self.shopping
+                )
                 if terminated or self.shopping:
                     break
 
