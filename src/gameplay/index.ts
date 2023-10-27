@@ -69,12 +69,12 @@ export const makeGame = ({ deltaTime, seed }: MakeGameOptions) => {
       costs: {
         shoot: 5,
         scourge: 10,
-        teleport: 10,
-        swap: 10,
-        homing: 10,
-        shield: 10,
-        cluster: 10,
-        gravity: 10,
+        teleport: 12,
+        swap: 11,
+        homing: 11,
+        shield: 12,
+        cluster: 14,
+        gravity: 12,
       },
       orders: [],
     };
