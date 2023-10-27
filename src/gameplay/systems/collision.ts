@@ -161,6 +161,7 @@ export const collisionSystem: System<GameComponent> = (
         dealDamage(otherId, components, {
           amount: projectile.damage,
           knockbackDirection: normal ? pga.multiply(normal, -1) : undefined,
+          knockbackMultiplier: projectile.knockbackMultiplier,
         });
       }
     }
@@ -196,7 +197,6 @@ export const collisionSystem: System<GameComponent> = (
 
       if (distSq < combinedRadiusSq) {
         handleCollision(idA, idB);
-        // handleCollision(idB, idA);
       }
     }
   }

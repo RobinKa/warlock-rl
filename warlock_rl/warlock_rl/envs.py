@@ -8,6 +8,7 @@ from warlock_rl.game import Game
 
 OBS_LOC_SCALE = 2_000
 ROUND_TIME_SCALE = 180
+NUM_PROJECTILES = 3
 MAX_ROUNDS = 3
 
 index_to_entity_id = {
@@ -22,6 +23,7 @@ ABILITY_IDS = [
     "scourge",
     "teleport",
     "swap",
+    "cluster",
     "homing",
     "shield",
 ]
@@ -124,7 +126,9 @@ def state_to_obs(
         dtype=np.float32,
     )
 
-    assert obs.shape == (1 + 2 * 13 + 3 * 3,), obs.shape
+    assert obs.shape == (
+        1 + 2 * (7 + len(ABILITY_IDS)) + NUM_PROJECTILES * 3,
+    ), obs.shape
     assert all(0 <= o <= 1 for o in obs), obs
 
     return obs
@@ -254,6 +258,14 @@ def action_to_order(
                 "type": "useAbility",
                 "abilityId": "shield",
             }
+        case 9:
+            if "cluster" not in state["abilities"][player_entity_id]:
+                return None
+            return {
+                "type": "useAbility",
+                "abilityId": "cluster",
+                "target": target,
+            }
 
     raise ValueError(f"Unhandled action {action=} {action_type=}")
 
@@ -261,8 +273,24 @@ def action_to_order(
 class WarlockEnv(MultiAgentEnv):
     _game: Game | None = None
 
-    round_action_space = gym.spaces.Box(0, 1, (12,))
-    round_observation_space = gym.spaces.Box(0, 1, (1 + 2 * 13 + 3 * 3,))
+    # Actions:
+    # 0: x
+    # 1: y
+    # 2: Is x,y offset from enemy?
+    # 3: Nothing
+    # 4: Stop
+    # 5: Move
+    # 6: Shoot
+    # 7: Teleport
+    # 8: Swap
+    # 9: Scourge
+    # 10: Homing
+    # 11: Shield
+    # 12: Cluster
+    round_action_space = gym.spaces.Box(0, 1, (6 + len(ABILITY_IDS),))
+    round_observation_space = gym.spaces.Box(
+        0, 1, (1 + 2 * (7 + len(ABILITY_IDS)) + NUM_PROJECTILES * 3,)
+    )
 
     shop_action_space = gym.spaces.Discrete(1 + len(ABILITY_IDS))
     shop_observation_space = gym.spaces.Box(0, 1, (1 + len(ABILITY_IDS),))
@@ -271,20 +299,6 @@ class WarlockEnv(MultiAgentEnv):
         assert num_players == 2  # TODO: support different number of players
 
         self._num_players = num_players
-
-        # Actions:
-        # 0: x
-        # 1: y
-        # 2: Is x,y offset from enemy?
-        # 3: Nothing
-        # 4: Stop
-        # 5: Move
-        # 6: Shoot
-        # 7: Teleport
-        # 8: Swap
-        # 9: Scourge
-        # 10: Homing
-        # 11: Shield
 
         self._agent_ids = set(
             list(range(num_players)) + [f"shop_{i}" for i in range(num_players)]
@@ -335,7 +349,7 @@ class WarlockEnv(MultiAgentEnv):
             self._game.log_game()
 
         self._game.start(
-            num_players=self.num_players, seed=seed, logging=np.random.random() < 0.01
+            num_players=self.num_players, seed=seed, logging=np.random.random() < 0.03
         )
 
         return self._make_obs(), {}

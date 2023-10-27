@@ -35,5 +35,11 @@ export function getAbilityDefaults(): AbilitiesComponent {
       target: "none",
       cooldown: 14,
     },
+    cluster: {
+      id: "cluster",
+      target: "point",
+      cooldown: 15.5,
+      castTime: 0.2,
+    },
   };
 }

@@ -73,6 +73,7 @@ export const makeGame = ({ deltaTime, seed }: MakeGameOptions) => {
         swap: 10,
         homing: 10,
         shield: 10,
+        cluster: 10,
       },
       orders: [],
     };

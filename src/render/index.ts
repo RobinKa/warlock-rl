@@ -172,6 +172,7 @@ function startGame(replay?: GameComponent[]) {
     "4",
     "5",
     "6",
+    "t",
     "s",
   ]);
   function handleInput() {
@@ -209,6 +210,12 @@ function startGame(replay?: GameComponent[]) {
       components.orders[localPlayerId].order = {
         type: "useAbility",
         abilityId: "swap",
+        target: { e1: x, e2: y },
+      };
+    } else if (keyStates["t"]) {
+      components.orders[localPlayerId].order = {
+        type: "useAbility",
+        abilityId: "cluster",
         target: { e1: x, e2: y },
       };
     } else if (keyStates["s"]) {

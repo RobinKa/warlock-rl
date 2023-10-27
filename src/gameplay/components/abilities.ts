@@ -24,6 +24,12 @@ export type AbilityTeleport = {
   target: "point";
 };
 
+
+export type AbilityCluster = {
+  id: "cluster";
+  target: "point";
+};
+
 export type AbilitySwap = {
   id: "swap";
   target: "point";
@@ -40,6 +46,7 @@ export type Ability = AbilityCommon &
     | AbilityShoot
     | AbilityHoming
     | AbilityTeleport
+    | AbilityCluster
     | AbilitySwap
     | AbilityShield
   );

@@ -1,4 +1,5 @@
 import * as pga from "@/common/ga_zpp";
+import { lerp, rotate } from "@/common/mathutils";
 import { GameComponent } from "@/gameplay/components";
 import { Ability } from "@/gameplay/components/abilities";
 import { GameStateComponent } from "@/gameplay/components/gamestate";
@@ -22,7 +23,7 @@ function abilityTeleport(
   target: pga.BladeE1 & pga.BladeE2,
   { bodies, units }: GameComponent
 ) {
-  units[entityId].location = target
+  units[entityId].location = target;
   bodies[entityId].location = target;
   bodies[entityId].velocity = pga.multiply(bodies[entityId].velocity, 0.8);
 }
@@ -34,13 +35,26 @@ type ProjectileOptions = {
   lifetime: number;
   homing?: boolean;
   swap?: boolean;
+  count?: number;
+  spread?: number;
+  knockbackMultiplier?: number;
 };
 
 function abilityShoot(
   entityId: string,
   target: pga.BladeE1 & pga.BladeE2,
   { bodies, lifetimes, projectiles, playerOwneds, gameState }: GameComponent,
-  { homing, swap, damage, radius, speed, lifetime }: ProjectileOptions
+  {
+    homing,
+    swap,
+    damage,
+    radius,
+    speed,
+    lifetime,
+    count = 1,
+    spread = 0,
+    knockbackMultiplier,
+  }: ProjectileOptions
 ) {
   // Spawn projectile
   const bodyLocation = bodies[entityId].location;
@@ -48,33 +62,43 @@ function abilityShoot(
   const distance = Math.sqrt(
     pga.innerProduct(bodyLocationToTarget, bodyLocationToTarget).scalar
   );
-  const direction = pga.div(bodyLocationToTarget, distance);
+  const castDirection = pga.div(bodyLocationToTarget, distance);
+  for (let i = 0; i < count; i++) {
+    // 1: 0.5
+    // 2: 0, 1
+    // 3: 0, 0.5, 1
+    // 4: 0, 0.33, 0.66, 1
+    const direction = rotate(
+      castDirection,
+      count === 1 ? 0 : lerp(i / (count - 1), -spread / 2, spread / 2)
+    );
+    const location = bodyLocation;
+    const velocity = pga.multiply(direction, speed);
 
-  const location = bodyLocation;
-  const velocity = pga.multiply(direction, speed);
+    const projectileEntityId = gameState.nextEntityId++;
 
-  const projectileEntityId = gameState.nextEntityId++;
+    lifetimes[projectileEntityId] = {
+      remainingFrames: Math.ceil(lifetime / gameState.deltaTime),
+    };
 
-  lifetimes[projectileEntityId] = {
-    remainingFrames: Math.ceil(lifetime / gameState.deltaTime),
-  };
+    bodies[projectileEntityId] = {
+      location,
+      velocity,
+      force: { e1: 0, e2: 0 },
+      radius: radius,
+      facing: 0,
+      turnRate: 0,
+    };
 
-  bodies[projectileEntityId] = {
-    location,
-    velocity,
-    force: { e1: 0, e2: 0 },
-    radius: radius,
-    facing: 0,
-    turnRate: 0,
-  };
+    projectiles[projectileEntityId] = {
+      damage,
+      knockbackMultiplier,
+      homing,
+      swap,
+    };
 
-  projectiles[projectileEntityId] = {
-    damage,
-    homing,
-    swap,
-  };
-
-  playerOwneds[projectileEntityId] = { ...playerOwneds[entityId] };
+    playerOwneds[projectileEntityId] = { ...playerOwneds[entityId] };
+  }
 }
 
 function abilityScourge(entityId: string, components: GameComponent) {
@@ -175,6 +199,17 @@ function useAbility(
       break;
     case "teleport":
       abilityTeleport(entityId, castOrder.target, components);
+      break;
+    case "cluster":
+      abilityShoot(entityId, castOrder.target, components, {
+        damage: 3.3,
+        radius: 22,
+        speed: 844,
+        lifetime: 672 / 844,
+        count: 4,
+        spread: 0.36,
+        knockbackMultiplier: 0.65,
+      });
       break;
     case "swap":
       abilityShoot(entityId, castOrder.target, components, {

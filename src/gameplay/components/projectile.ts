@@ -18,5 +18,6 @@ type ProjectileComponentSwapPart =
 
 export type ProjectileComponent = {
   damage: number;
+  knockbackMultiplier?: number;
 } & ProjectileComponentHomingPart &
   ProjectileComponentSwapPart;
