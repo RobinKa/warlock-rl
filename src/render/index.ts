@@ -167,46 +167,47 @@ function startGame(replay?: GameComponent[]) {
   // Input
   const { keyStates, clearKeyStates } = useKeyboard([
     "1",
-    "2",
-    "3",
-    "4",
-    "5",
-    "6",
+    "g",
+    "r",
+    "f",
+    "d",
+    "c",
     "t",
+    "y",
     "s",
   ]);
   function handleInput() {
     const { x, y } = mousePosition;
 
-    if (keyStates["1"]) {
+    if (keyStates["g"]) {
       components.orders[localPlayerId].order = {
         type: "useAbility",
         abilityId: "shoot",
         target: { e1: x, e2: y },
       };
-    } else if (keyStates["2"]) {
+    } else if (keyStates["r"]) {
       components.orders[localPlayerId].order = {
         type: "useAbility",
         abilityId: "teleport",
         target: { e1: x, e2: y },
       };
-    } else if (keyStates["3"]) {
+    } else if (keyStates["f"]) {
       components.orders[localPlayerId].order = {
         type: "useAbility",
         abilityId: "scourge",
       };
-    } else if (keyStates["4"]) {
+    } else if (keyStates["d"]) {
       components.orders[localPlayerId].order = {
         type: "useAbility",
         abilityId: "homing",
         target: { e1: x, e2: y },
       };
-    } else if (keyStates["5"]) {
+    } else if (keyStates["c"]) {
       components.orders[localPlayerId].order = {
         type: "useAbility",
         abilityId: "shield",
       };
-    } else if (keyStates["6"]) {
+    } else if (keyStates["1"]) {
       components.orders[localPlayerId].order = {
         type: "useAbility",
         abilityId: "swap",
@@ -216,6 +217,12 @@ function startGame(replay?: GameComponent[]) {
       components.orders[localPlayerId].order = {
         type: "useAbility",
         abilityId: "cluster",
+        target: { e1: x, e2: y },
+      };
+    } else if (keyStates["y"]) {
+      components.orders[localPlayerId].order = {
+        type: "useAbility",
+        abilityId: "gravity",
         target: { e1: x, e2: y },
       };
     } else if (keyStates["s"]) {
@@ -280,8 +287,8 @@ function startGame(replay?: GameComponent[]) {
   // Rendering
   const bodyContainers: Record<string, PIXI.Container> = {};
   const REFERENCE_WIDTH = 5_000;
-  app.ticker.minFPS = 240;
-  app.ticker.maxFPS = 240;
+  app.ticker.minFPS = isReplay ? 240 : 30;
+  app.ticker.maxFPS = isReplay ? 240 : 30;
 
   function render() {
     // Update UI widgets
@@ -325,7 +332,10 @@ function startGame(replay?: GameComponent[]) {
         const container = new PIXI.Container();
 
         const circle = new PIXI.Graphics();
-        circle.beginFill(0x00ff00);
+        circle.beginFill(
+          entityId in components.projectiles ? 0xff3399 : 0x00ff00,
+          body.radius > 100 ? 0.2 : undefined
+        );
         circle.drawCircle(0, 0, body.radius);
         circle.endFill();
         container.addChild(circle);

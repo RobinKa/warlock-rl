@@ -41,5 +41,11 @@ export function getAbilityDefaults(): AbilitiesComponent {
       cooldown: 15.5,
       castTime: 0.2,
     },
+    gravity: {
+      id: "gravity",
+      target: "point",
+      cooldown: 21,
+      castTime: 0.2,
+    },
   };
 }

@@ -157,7 +157,10 @@ export const collisionSystem: System<GameComponent> = (
         }
       } else {
         // Generic projectile
-        lifetimes[projectileId] = { remainingFrames: 0 };
+        if (projectile.destroyedOnCollision !== false) {
+          lifetimes[projectileId] = { remainingFrames: 0 };
+        }
+
         dealDamage(otherId, components, {
           amount: projectile.damage,
           knockbackDirection: normal ? pga.multiply(normal, -1) : undefined,

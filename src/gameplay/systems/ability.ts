@@ -33,11 +33,13 @@ type ProjectileOptions = {
   radius: number;
   speed: number;
   lifetime: number;
-  homing?: boolean;
-  swap?: boolean;
   count?: number;
   spread?: number;
   knockbackMultiplier?: number;
+  destroyedOnCollision?: boolean;
+  homing?: boolean;
+  swap?: boolean;
+  gravity?: boolean;
 };
 
 function abilityShoot(
@@ -45,8 +47,6 @@ function abilityShoot(
   target: pga.BladeE1 & pga.BladeE2,
   { bodies, lifetimes, projectiles, playerOwneds, gameState }: GameComponent,
   {
-    homing,
-    swap,
     damage,
     radius,
     speed,
@@ -54,6 +54,10 @@ function abilityShoot(
     count = 1,
     spread = 0,
     knockbackMultiplier,
+    destroyedOnCollision,
+    homing,
+    swap,
+    gravity,
   }: ProjectileOptions
 ) {
   // Spawn projectile
@@ -95,6 +99,8 @@ function abilityShoot(
       knockbackMultiplier,
       homing,
       swap,
+      gravity,
+      destroyedOnCollision,
     };
 
     playerOwneds[projectileEntityId] = { ...playerOwneds[entityId] };
@@ -218,6 +224,17 @@ function useAbility(
         speed: 1983,
         lifetime: 0.4706,
         swap: true,
+      });
+      break;
+    case "gravity":
+      abilityShoot(entityId, castOrder.target, components, {
+        damage: 0.12,
+        radius: 250,
+        speed: 450,
+        lifetime: 2,
+        gravity: true,
+        destroyedOnCollision: false,
+        knockbackMultiplier: 0,
       });
       break;
     case "shield":

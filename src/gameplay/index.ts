@@ -74,6 +74,7 @@ export const makeGame = ({ deltaTime, seed }: MakeGameOptions) => {
         homing: 10,
         shield: 10,
         cluster: 10,
+        gravity: 10,
       },
       orders: [],
     };

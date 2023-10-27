@@ -16,8 +16,18 @@ type ProjectileComponentSwapPart =
       swapped?: boolean;
     };
 
+type ProjectileComponentGravityPart =
+  | {
+      gravity?: false;
+    }
+  | {
+      gravity: true;
+    };
+
 export type ProjectileComponent = {
   damage: number;
   knockbackMultiplier?: number;
+  destroyedOnCollision?: boolean;
 } & ProjectileComponentHomingPart &
-  ProjectileComponentSwapPart;
+  ProjectileComponentSwapPart &
+  ProjectileComponentGravityPart;

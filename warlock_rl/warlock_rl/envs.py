@@ -26,6 +26,7 @@ ABILITY_IDS = [
     "cluster",
     "homing",
     "shield",
+    "gravity",
 ]
 
 
@@ -264,6 +265,14 @@ def action_to_order(
             return {
                 "type": "useAbility",
                 "abilityId": "cluster",
+                "target": target,
+            }
+        case 10:
+            if "gravity" not in state["abilities"][player_entity_id]:
+                return None
+            return {
+                "type": "useAbility",
+                "abilityId": "gravity",
                 "target": target,
             }
 

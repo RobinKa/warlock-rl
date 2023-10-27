@@ -24,7 +24,6 @@ export type AbilityTeleport = {
   target: "point";
 };
 
-
 export type AbilityCluster = {
   id: "cluster";
   target: "point";
@@ -40,6 +39,11 @@ export type AbilityShield = {
   target: "none";
 };
 
+export type AbilityGravity = {
+  id: "gravity";
+  target: "point";
+};
+
 export type Ability = AbilityCommon &
   (
     | AbilityScourge
@@ -49,6 +53,7 @@ export type Ability = AbilityCommon &
     | AbilityCluster
     | AbilitySwap
     | AbilityShield
+    | AbilityGravity
   );
 
 export type AbilityId = Ability["id"];
