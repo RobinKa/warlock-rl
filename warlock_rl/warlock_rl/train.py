@@ -173,7 +173,7 @@ algo = (
         # train_batch_size=8192,
         # sgd_minibatch_size=8192,
         # lr=5e-5,
-        # num_sgd_iter=4,
+        num_sgd_iter=4,
         # lr_schedule=[[0, 8e-5], [20_000, 4e-5], [1_200_000, 3e-5]],
     )
     .evaluation(

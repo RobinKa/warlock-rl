@@ -19,6 +19,9 @@ function resetGame(components: GameComponent) {
     lifetimes[projectileId].remainingFrames = 0;
   }
 
+  // Reset arena
+  components.arena = getDefaultArena(components);
+
   // Reset players
   // TODO: Can this be unified with the initial setup?
   for (const [playerId, player] of Object.entries(players)) {
@@ -65,7 +68,6 @@ export function roundSystem(components: GameComponent) {
         Object.values(players).every((player) => player.ready)
       ) {
         resetGame(components);
-        components.arena = getDefaultArena(components);
         components.gameState.round++;
         gameState.state = {
           type: "round",

@@ -323,6 +323,7 @@ function startGame(replay?: GameComponent[]) {
 
     // Draw arena
     if (arena.radius !== components.arena.radius) {
+      arena.radius = components.arena.radius;
       arena.redraw();
     }
 
