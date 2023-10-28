@@ -5,7 +5,7 @@ export function getAbilityDefaults(): AbilitiesComponent {
     shoot: {
       id: "shoot",
       target: "point",
-      cooldown: 3,
+      cooldown: 4.8,
       castTime: 0.2,
     },
     teleport: {
