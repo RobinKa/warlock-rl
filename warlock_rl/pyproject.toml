@@ -25,6 +25,7 @@ nvidia-cusolver-cu12 = "^11.5.2.141"
 nvidia-nvjitlink-cu12 = "^12.2.140"
 nvidia-nvtx-cu12 = "^12.2.140"
 dataclasses-json = "^0.6.1"
+wandb = "^0.15.12"
 
 
 [tool.poetry.group.dev.dependencies]

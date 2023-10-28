@@ -9,7 +9,7 @@ from warlock_rl.game import Game
 OBS_LOC_SCALE = 2_000
 ROUND_TIME_SCALE = 180
 NUM_PROJECTILES = 3
-MAX_ROUNDS = 3
+MAX_ROUNDS = 5
 
 index_to_entity_id = {
     0: "1000",

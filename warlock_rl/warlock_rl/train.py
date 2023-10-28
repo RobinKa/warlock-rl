@@ -1,5 +1,8 @@
+import os
+
 import numpy as np
 from ray import air, tune
+from ray.air.integrations.wandb import WandbLoggerCallback
 from ray.rllib.algorithms.algorithm import Algorithm
 from ray.rllib.algorithms.callbacks import DefaultCallbacks
 from ray.rllib.algorithms.ppo import PPOConfig
@@ -7,12 +10,19 @@ from ray.rllib.core.rl_module.marl_module import MultiAgentRLModuleSpec
 from ray.rllib.core.rl_module.rl_module import SingleAgentRLModuleSpec
 from ray.rllib.examples.policy.random_policy import RandomPolicy
 from ray.rllib.examples.rl_module.random_rl_module import RandomRLModule
+from ray.rllib.models.catalog import ModelCatalog
 from ray.rllib.policy.policy import PolicySpec
 from ray.tune import CLIReporter
 
 from warlock_rl.envs import MAX_ROUNDS, WarlockEnv
+from warlock_rl.models import TorchFrameStackingModel
 
 WIN_RATE_THRESHOLD = 0.9
+
+ModelCatalog.register_custom_model(
+    "frame_stack_model",
+    TorchFrameStackingModel,
+)
 
 
 class SelfPlayCallback(DefaultCallbacks):
@@ -156,7 +166,7 @@ algo = (
         num_cpus_per_worker=0.9,
     )
     .training(
-        # _enable_learner_api=False,
+        _enable_learner_api=False,
         # clip_param=0.1,
         model={
             "fcnet_hiddens": [64],
@@ -165,6 +175,11 @@ algo = (
             # "use_lstm": True,
             # "lstm_cell_size": 64,
             # "max_seq_len": 16,
+            "custom_model": "frame_stack_model",
+            "custom_model_config": {
+                "num_frames": 4,
+            },
+            "vf_share_layers": True,
         },
         # train_batch_size=3200,
         # sgd_minibatch_size=64,
@@ -207,7 +222,7 @@ algo = (
         policies_to_train=["main", "main_shop"],
     )
     .rl_module(
-        # _enable_rl_module_api=False,
+        _enable_rl_module_api=False,
         rl_module_spec=MultiAgentRLModuleSpec(
             module_specs={
                 "main": SingleAgentRLModuleSpec(
@@ -236,26 +251,26 @@ algo = (
         env=WarlockEnv,
         disable_env_checking=True,  # fails with multiagent
     )
-    # .build()
 )
 
 # algo = Algorithm.from_checkpoint("/tmp/tmpy010_u6o")
 
-# i = 0
-# while True:
-#     result = algo.train()
-#     print(pretty_print(result))
-
-#     if i % 5 == 0:
-#         checkpoint_dir = algo.save().checkpoint.path
-#         print(f"Checkpoint saved in directory {checkpoint_dir}")
-#     i += 1
+callbacks = []
+if wandb_api_key := os.environ.get("WANDB_API_KEY"):
+    callbacks.append(
+        WandbLoggerCallback(
+            api_key=wandb_api_key,
+            project="warlock-rl",
+            log_config=True,
+        )
+    )
 
 results = tune.Tuner(
     "PPO",
     param_space=algo,
     run_config=air.RunConfig(
         # stop=stop,
+        callbacks=callbacks,
         verbose=2,
         failure_config=air.FailureConfig(fail_fast="raise"),
         progress_reporter=CLIReporter(
