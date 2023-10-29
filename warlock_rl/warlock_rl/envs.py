@@ -135,6 +135,35 @@ def state_to_obs(
     return obs
 
 
+def state_to_action_mask(state: dict, self_player_index: int) -> np.ndarray:
+    self_entity_id = index_to_entity_id[self_player_index]
+
+    def can_use_ability(entity_id: str, ability_id: str) -> float:
+        if ability_id not in state["abilities"][entity_id]:
+            return False
+        ability = state["abilities"][entity_id][ability_id]
+        if "lastUsedFrame" not in ability:
+            return True
+        game_time = state["gameState"]["frameNumber"] * state["gameState"]["deltaTime"]
+        ready_time = (
+            ability["lastUsedFrame"] * state["gameState"]["deltaTime"]
+            + ability["cooldown"]
+        )
+        return game_time >= ready_time
+
+    action_mask = [1] * 6 + [
+        1 if can_use_ability(self_entity_id, ability_id) else 0
+        for ability_id in ABILITY_IDS
+    ]
+
+    action_mask = np.array(action_mask, np.float32)
+
+    assert action_mask.shape == WarlockEnv.round_action_space.shape, action_mask.shape
+    assert all(0 <= o <= 1 for o in action_mask), action_mask
+
+    return action_mask
+
+
 def state_to_shop_obs(
     state: dict, self_player_index: int, other_player_index: int
 ) -> np.ndarray:
@@ -148,6 +177,34 @@ def state_to_shop_obs(
     has_abilities = [1 if has_ability(ability_id) else 0 for ability_id in ABILITY_IDS]
 
     return np.clip([gold / 50, *has_abilities], 0, 1, dtype=np.float32)
+
+
+def state_to_shop_action_mask(state: dict, self_player_index: int) -> np.ndarray:
+    self_entity_id = index_to_entity_id[self_player_index]
+
+    def can_buy(ability_id: str) -> bool:
+        gold = state["shops"][self_entity_id]["gold"]
+        cost = state["shops"][self_entity_id]["costs"].get(ability_id)
+        return (
+            # TODO: Remove the next line when we support upgrading
+            # (or make it a separate action?)
+            ability_id not in state["abilities"][self_entity_id]
+            and cost is not None
+            and gold >= cost
+        )
+
+    action_mask = np.array(
+        [1] + [1 if can_buy(ability_id) else 0 for ability_id in ABILITY_IDS],
+        dtype=np.float32,
+    )
+
+    assert action_mask.shape == (WarlockEnv.shop_action_space.n,), (
+        action_mask.shape,
+        WarlockEnv.shop_action_space.n,
+    )
+    assert all(0 <= o <= 1 for o in action_mask), action_mask
+
+    return action_mask
 
 
 def calculate_reward(old_state, new_state, self_player_index, other_player_index):
@@ -296,13 +353,25 @@ class WarlockEnv(MultiAgentEnv):
     # 10: Homing
     # 11: Shield
     # 12: Cluster
-    round_action_space = gym.spaces.Box(0, 1, (6 + len(ABILITY_IDS),))
-    round_observation_space = gym.spaces.Box(
-        0, 1, (1 + 2 * (7 + len(ABILITY_IDS)) + NUM_PROJECTILES * 3,)
+    round_num_obs = 1 + 2 * (7 + len(ABILITY_IDS)) + NUM_PROJECTILES * 3
+    round_num_actions = 6 + len(ABILITY_IDS)
+    round_action_space = gym.spaces.Box(0, 1, (round_num_actions,))
+    round_observation_space = gym.spaces.Dict(
+        {
+            "obs": gym.spaces.Box(0, 1, (round_num_obs,)),
+            "action_mask": gym.spaces.Box(0, 1, (round_num_actions,)),
+        },
     )
 
-    shop_action_space = gym.spaces.Discrete(1 + len(ABILITY_IDS))
-    shop_observation_space = gym.spaces.Box(0, 1, (1 + len(ABILITY_IDS),))
+    shop_num_obs = 1 + len(ABILITY_IDS)
+    shop_num_actions = 1 + len(ABILITY_IDS)
+    shop_action_space = gym.spaces.Discrete(shop_num_actions)
+    shop_observation_space = gym.spaces.Dict(
+        {
+            "obs": gym.spaces.Box(0, 1, (shop_num_obs,)),
+            "action_mask": gym.spaces.Box(0, 1, (shop_num_actions,)),
+        }
+    )
 
     def __init__(self, *args, num_players: int = 2, **kwargs) -> None:
         assert num_players == 2  # TODO: support different number of players
@@ -324,13 +393,20 @@ class WarlockEnv(MultiAgentEnv):
     def _make_round_obs(self):
         assert not self.shopping
         return {
-            i: state_to_obs(self._game.state, i, 1 - i) for i in range(self.num_players)
+            i: {
+                "obs": state_to_obs(self._game.state, i, 1 - i),
+                "action_mask": state_to_action_mask(self._game.state, i),
+            }
+            for i in range(self.num_players)
         }
 
     def _make_shop_obs(self):
         assert self.shopping
         return {
-            f"shop_{i}": state_to_shop_obs(self._game.state, i, 1 - i)
+            f"shop_{i}": {
+                "obs": state_to_shop_obs(self._game.state, i, 1 - i),
+                "action_mask": state_to_shop_action_mask(self._game.state, i),
+            }
             for i in range(self.num_players)
         }
 

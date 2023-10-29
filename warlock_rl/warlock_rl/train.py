@@ -17,7 +17,7 @@ from ray.tune import CLIReporter
 from warlock_rl.envs import MAX_ROUNDS, WarlockEnv
 from warlock_rl.models import TorchFrameStackingModel
 
-WIN_RATE_THRESHOLD = 0.9
+WIN_RATE_THRESHOLD = 0.95
 
 ModelCatalog.register_custom_model(
     "frame_stack_model",
@@ -156,8 +156,8 @@ algo = (
         # num_rollout_workers=32,
         num_rollout_workers=16,
         num_envs_per_worker=1,
-        # rollout_fragment_length=512,
-        rollout_fragment_length=44,
+        rollout_fragment_length=512,
+        # rollout_fragment_length=44,
     )
     .resources(
         # num_gpus=1,
@@ -169,7 +169,7 @@ algo = (
         _enable_learner_api=False,
         # clip_param=0.1,
         model={
-            "fcnet_hiddens": [64],
+            # "fcnet_hiddens": [64],
             # "fcnet_hiddens": [128, 128],
             # "fcnet_hiddens": [64],
             # "use_lstm": True,
@@ -183,12 +183,12 @@ algo = (
         },
         # train_batch_size=3200,
         # sgd_minibatch_size=64,
-        sgd_minibatch_size=64,
-        train_batch_size=44 * 8 * 2,
-        # train_batch_size=8192,
-        # sgd_minibatch_size=8192,
+        # sgd_minibatch_size=64,
+        # train_batch_size=44 * 8 * 2,
+        train_batch_size=8192,
+        sgd_minibatch_size=8192,
         # lr=5e-5,
-        num_sgd_iter=4,
+        # num_sgd_iter=4,
         # lr_schedule=[[0, 8e-5], [20_000, 4e-5], [1_200_000, 3e-5]],
     )
     .evaluation(
