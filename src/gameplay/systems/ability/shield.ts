@@ -1,4 +1,5 @@
 import * as pga from "@/common/ga_zpp";
+import { reflect } from "@/common/mathutils";
 import { GameComponent } from "@/gameplay/components";
 import { areEnemies } from "../team";
 import { AbilityDefinition } from "./definition";
@@ -25,7 +26,8 @@ export const shieldDefinition: AbilityDefinition = {
 
       function shieldResponse(
         shieldId: number | string,
-        projectileId: number | string
+        projectileId: number | string,
+        normal: pga.BladeE1 & pga.BladeE2
       ) {
         // Change owner
         if (projectileId in playerOwneds && !projectiles[projectileId]?.swap) {
@@ -40,21 +42,21 @@ export const shieldDefinition: AbilityDefinition = {
           projectile.homingTarget = undefined;
         }
 
-        // TODO: Proper reflection along normal
+        // Reflect velocity along normal
         if (projectileId in bodies) {
-          bodies[projectileId].velocity = pga.multiply(
+          bodies[projectileId].velocity = reflect(
             bodies[projectileId].velocity,
-            -1
+            normal
           );
         }
       }
 
       if (areEnemies(pair.idA, pair.idB, components)) {
         if (pair.idA in projectiles && pair.idB in shields) {
-          shieldResponse(pair.idB, pair.idA);
+          shieldResponse(pair.idB, pair.idA, pair.normal);
           pair.handled = true;
         } else if (pair.idA in shields && pair.idB in projectiles) {
-          shieldResponse(pair.idA, pair.idB);
+          shieldResponse(pair.idA, pair.idB, pga.multiply(pair.normal, -1));
           pair.handled = true;
         }
       }

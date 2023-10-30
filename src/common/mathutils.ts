@@ -32,3 +32,13 @@ export function rotate(
 export function lerp(alpha: number, from: number, to: number) {
   return (1 - alpha) * from + alpha * to;
 }
+
+export function reflect(
+  v: pga.BladeE1 & pga.BladeE2,
+  normal: pga.BladeE1 & pga.BladeE2
+) {
+  return pga.sub(
+    v,
+    pga.multiply(normal, 2 * pga.innerProduct(v, normal).scalar)
+  );
+}
