@@ -13,6 +13,7 @@ import { movementSystem } from "./movement";
 import { orderSystem } from "./order";
 import { physicsSystem } from "./physics";
 import { projectileCollisionSystem } from "./projectilecollision";
+import { regenerationSystem } from "./regeneration";
 import { roundSystem } from "./round";
 import { shopSystem } from "./shop";
 
@@ -35,19 +36,8 @@ export const gameSystem: System<GameComponent> = (
     projectileCollisionSystem,
     roundSystem,
     lifetimeSystem,
+    regenerationSystem,
   ];
-
-  // TODO: Move to system
-  for (const [entityId, unit] of Object.entries(components.units)) {
-    if (entityId in components.healths) {
-      const health = components.healths[entityId];
-      health.current = Math.min(
-        health.maximum,
-        health.current +
-          unit.healthRegeneration * components.gameState.deltaTime
-      );
-    }
-  }
 
   systems.forEach((system) => system(components));
 

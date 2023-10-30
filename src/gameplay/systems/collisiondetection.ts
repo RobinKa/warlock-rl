@@ -1,16 +1,11 @@
 import * as pga from "@/common/ga_zpp";
 import { System } from "@/common/systems";
 import { GameComponent } from "@/gameplay/components";
-import { BodyComponent } from "@/gameplay/components/body";
-
-function integrateBody(body: BodyComponent, dt: number) {
-  body.location = pga.add(body.location, pga.multiply(body.velocity, dt));
-}
 
 export const collisionDetectionSystem: System<GameComponent> = (
   components: GameComponent
 ) => {
-  const { bodies, detectedCollisions, gameState } = components;
+  const { bodies, detectedCollisions } = components;
 
   detectedCollisions.pairs.length = 0;
 
