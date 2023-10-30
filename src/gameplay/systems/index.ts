@@ -1,14 +1,18 @@
 import { System } from "@/common/systems";
 import { GameComponent } from "../components";
-import { abilitySystem } from "./ability";
-import { collisionSystem } from "./collision";
-import { gravitySystem } from "./gravity";
-import { homingSystem } from "./homing";
+import {
+  abilityCollisionSystem,
+  abilityMovementSystem,
+  abilitySystem,
+} from "./ability";
+import { bodyCollisionSystem } from "./bodycollision";
+import { collisionDetectionSystem } from "./collisiondetection";
 import { lavaSystem } from "./lava";
 import { lifetimeSystem } from "./lifetime";
 import { movementSystem } from "./movement";
 import { orderSystem } from "./order";
 import { physicsSystem } from "./physics";
+import { projectileCollisionSystem } from "./projectilecollision";
 import { roundSystem } from "./round";
 import { shopSystem } from "./shop";
 
@@ -22,11 +26,13 @@ export const gameSystem: System<GameComponent> = (
     orderSystem,
     abilitySystem,
     movementSystem,
-    homingSystem,
-    gravitySystem,
+    abilityMovementSystem,
     physicsSystem,
     lavaSystem,
-    collisionSystem,
+    collisionDetectionSystem,
+    bodyCollisionSystem,
+    abilityCollisionSystem,
+    projectileCollisionSystem,
     roundSystem,
     lifetimeSystem,
   ];

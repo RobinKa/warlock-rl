@@ -41,6 +41,9 @@ export const makeGame = ({ deltaTime, seed }: MakeGameOptions) => {
     units: {},
     shields: {},
     shops: {},
+    detectedCollisions: {
+      pairs: [],
+    },
   };
 
   function step() {

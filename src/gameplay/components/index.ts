@@ -2,6 +2,7 @@ import { EntityComponents, SingletonComponent } from "@/common/components";
 import { AbilitiesComponent } from "./abilities";
 import { ArenaComponent } from "./arena";
 import { BodyComponent } from "./body";
+import { DetectedCollisionsComponent } from "./detectedcollisions";
 import { GameEventsComponent } from "./gameevents";
 import { GameStateComponent } from "./gamestate";
 import { HealthComponent } from "./health";
@@ -29,4 +30,5 @@ export type GameComponent = {
   units: EntityComponents<UnitComponent>;
   shields: EntityComponents<ShieldComponent>;
   players: EntityComponents<PlayerComponent>;
+  detectedCollisions: SingletonComponent<DetectedCollisionsComponent>;
 };
