@@ -153,17 +153,16 @@ algo = (
     #     torch_compile_learner_dynamo_mode="default",
     # )
     .rollouts(
-        # num_rollout_workers=32,
-        num_rollout_workers=16,
-        num_envs_per_worker=1,
+        num_rollout_workers=32,
+        num_envs_per_worker=2,
         rollout_fragment_length=512,
         # rollout_fragment_length=44,
     )
     .resources(
-        # num_gpus=1,
-        # num_gpus_per_learner_worker=1,
+        num_gpus=1,
+        num_gpus_per_learner_worker=1,
         # num_gpus_per_worker=0.03,
-        num_cpus_per_worker=0.9,
+        num_cpus_per_worker=0.95,
     )
     .training(
         _enable_learner_api=False,
@@ -175,24 +174,24 @@ algo = (
             # "use_lstm": True,
             # "lstm_cell_size": 64,
             # "max_seq_len": 16,
+
             "custom_model": "frame_stack_model",
             "custom_model_config": {
                 "num_frames": 4,
             },
-            "vf_share_layers": True,
+            #"vf_share_layers": True,
         },
-        # train_batch_size=3200,
         # sgd_minibatch_size=64,
-        # sgd_minibatch_size=64,
-        # train_batch_size=44 * 8 * 2,
-        train_batch_size=8192,
-        sgd_minibatch_size=8192,
-        # lr=5e-5,
+        # train_batch_size=44 * 32 * 2,
         # num_sgd_iter=4,
+        train_batch_size=32768,
+        sgd_minibatch_size=32768,
+        # lr=5e-5,
         # lr_schedule=[[0, 8e-5], [20_000, 4e-5], [1_200_000, 3e-5]],
     )
     .evaluation(
-        evaluation_interval=100,
+        # evaluation_interval=200,
+        evaluation_interval=50,
         evaluation_duration=10,
         # evaluation_parallel_to_training=True,
         # evaluation_num_workers=4,
