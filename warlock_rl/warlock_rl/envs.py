@@ -7,9 +7,13 @@ from ray.rllib.env.multi_agent_env import MultiAgentEnv
 from warlock_rl.game import Game
 
 OBS_LOC_SCALE = 2_000
+OBS_RELATIVE_LOC_SCALE = 500
 ROUND_TIME_SCALE = 180
 NUM_PROJECTILES = 3
 MAX_ROUNDS = 5
+PLAYER_OBS_SIZE = 11
+PROJECTILE_OBS_SIZE = 6
+MAX_ARENA_RADIUS = 32 * 15
 
 index_to_entity_id = {
     0: "1000",
@@ -51,14 +55,21 @@ def state_to_obs(
         )
         return cooldown / ability["cooldown"]
 
+    self_x = state["bodies"][self_entity_id]["location"]["e1"]
+    self_y = state["bodies"][self_entity_id]["location"]["e2"]
+
     def get_player_observations(entity_id: str) -> list[float]:
         health = state["healths"][entity_id]["current"]
         x = state["bodies"][entity_id]["location"]["e1"]
         y = state["bodies"][entity_id]["location"]["e2"]
+        dx = x - self_x
+        dy = y - self_y
+        dist = np.sqrt(dx * dx + dy * dy)
         facing_x = np.cos(state["bodies"][entity_id]["facing"])
         facing_y = np.sin(state["bodies"][entity_id]["facing"])
         casting = 1 if state["units"][entity_id]["state"]["type"] == "casting" else 0
         moving = 1 if state["units"][entity_id]["state"]["type"] == "moving" else 0
+        distance_to_center = np.sqrt(x*x+y*y)
         ability_cooldowns = [
             get_ability_relative_cooldown(entity_id, ability_id)
             for ability_id in ABILITY_IDS
@@ -68,16 +79,23 @@ def state_to_obs(
             health / 100,
             x / OBS_LOC_SCALE + 0.5,
             y / OBS_LOC_SCALE + 0.5,
+            dx / OBS_RELATIVE_LOC_SCALE + 0.5,
+            dy / OBS_RELATIVE_LOC_SCALE + 0.5,
+            dist / OBS_RELATIVE_LOC_SCALE,
             facing_x * 0.5 + 0.5,
             facing_y * 0.5 + 0.5,
             casting,
             moving,
+            distance_to_center / (2 * MAX_ARENA_RADIUS),
             *ability_cooldowns,
         ]
 
     def get_projectile_observations(entity_id: str) -> list[float]:
         x = state["bodies"][entity_id]["location"]["e1"]
         y = state["bodies"][entity_id]["location"]["e2"]
+        dx = x - self_x
+        dy = y - self_y
+        dist = np.sqrt(dx * dx + dy * dy)
         is_enemy = (
             state["playerOwneds"][entity_id]["owningPlayerId"]
             != state["playerOwneds"][self_entity_id]["owningPlayerId"]
@@ -85,6 +103,9 @@ def state_to_obs(
         return [
             x / OBS_LOC_SCALE + 0.5,
             y / OBS_LOC_SCALE + 0.5,
+            dx / OBS_RELATIVE_LOC_SCALE + 0.5,
+            dy / OBS_RELATIVE_LOC_SCALE + 0.5,
+            dist / OBS_RELATIVE_LOC_SCALE,
             1 if is_enemy else 0,
         ]
 
@@ -98,17 +119,19 @@ def state_to_obs(
         key=lambda x: distance_squared_to_self(state["bodies"][x[0]]["location"]),
     )
 
-    projectile_obs = [[0.5, 0.5, 0.5] for _ in range(3)]
+    projectile_obs = [[0.5] * PROJECTILE_OBS_SIZE for _ in range(3)]
     for i, (projectile_id, _) in enumerate(sorted_projectiles[: len(projectile_obs)]):
         projectile_obs[i] = get_projectile_observations(projectile_id)
 
-    elapsed_time = state["gameState"]["deltaTime"] * (
-        state["gameState"]["frameNumber"] - state["gameState"]["state"]["startFrame"]
-    )
+    # elapsed_time = state["gameState"]["deltaTime"] * (
+    #     state["gameState"]["frameNumber"] - state["gameState"]["state"]["startFrame"]
+    # )
+
+    arena_radius = state["arena"]["radius"]
 
     observations = (
         [
-            elapsed_time / ROUND_TIME_SCALE,
+            arena_radius / MAX_ARENA_RADIUS,
         ]
         + get_player_observations(self_entity_id)
         + get_player_observations(other_entity_id)
@@ -127,9 +150,10 @@ def state_to_obs(
         dtype=np.float32,
     )
 
-    assert obs.shape == (
-        1 + 2 * (7 + len(ABILITY_IDS)) + NUM_PROJECTILES * 3,
-    ), obs.shape
+    assert obs.shape == WarlockEnv.round_observation_space["obs"].shape, (
+        obs.shape,
+        WarlockEnv.round_observation_space["obs"].shape,
+    )
     assert all(0 <= o <= 1 for o in obs), obs
 
     return obs
@@ -152,13 +176,13 @@ def state_to_action_mask(state: dict, self_player_index: int) -> np.ndarray:
         return game_time >= ready_time
 
     action_mask = (
-        [1] * 3 # nothing, stop, move
+        [1] * 3  # nothing, stop, move
         + [
             1 if can_use_ability(self_entity_id, ability_id) else 0
             for ability_id in ABILITY_IDS
-        ] # abilities
-        + [1] * 2 # xy (unused)
-        + [1] * 2 # target type (unused)
+        ]  # abilities
+        + [1] * 2  # xy (unused)
+        + [1] * 2  # target type (unused)
     )
 
     action_mask = np.array(action_mask, np.int8)
@@ -339,7 +363,11 @@ class WarlockEnv(MultiAgentEnv):
     # 11: Homing
     # 12: Shield
     # 13: Cluster
-    round_num_obs = 1 + 2 * (7 + len(ABILITY_IDS)) + NUM_PROJECTILES * 3
+    round_num_obs = (
+        1
+        + 2 * (PLAYER_OBS_SIZE + len(ABILITY_IDS))
+        + NUM_PROJECTILES * PROJECTILE_OBS_SIZE
+    )
     round_num_actions = 7 + len(ABILITY_IDS)
     round_action_space = gym.spaces.Dict(
         {
