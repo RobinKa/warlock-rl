@@ -18,6 +18,7 @@ from warlock_rl.envs import MAX_ROUNDS, WarlockEnv
 from warlock_rl.models import TorchFrameStackingModel
 
 WIN_RATE_THRESHOLD = 0.95
+RANDOM_SHOP = False
 
 ModelCatalog.register_custom_model(
     "frame_stack_model",
@@ -75,7 +76,7 @@ class SelfPlayCallback(DefaultCallbacks):
                     )
                 return (
                     "main_shop"
-                    if agent_id == "shop_0"
+                    if agent_id == "shop_0" or RANDOM_SHOP
                     else "main_v{}_shop".format(
                         np.random.choice(list(range(1, self.current_opponent + 1)))
                     )
@@ -92,16 +93,17 @@ class SelfPlayCallback(DefaultCallbacks):
                     action_space=WarlockEnv.round_action_space,
                     observation_space=WarlockEnv.round_observation_space,
                 )
-                new_shop_policy = algorithm.add_policy(
-                    policy_id=new_pol_id + "_shop",
-                    policy_cls=type(main_shop_policy),
-                    policy_mapping_fn=policy_mapping_fn,
-                    module_spec=SingleAgentRLModuleSpec.from_module(
-                        main_shop_policy.model
-                    ),
-                    action_space=WarlockEnv.shop_action_space,
-                    observation_space=WarlockEnv.shop_observation_space,
-                )
+                if not RANDOM_SHOP:
+                    new_shop_policy = algorithm.add_policy(
+                        policy_id=new_pol_id + "_shop",
+                        policy_cls=type(main_shop_policy),
+                        policy_mapping_fn=policy_mapping_fn,
+                        module_spec=SingleAgentRLModuleSpec.from_module(
+                            main_shop_policy.model
+                        ),
+                        action_space=WarlockEnv.shop_action_space,
+                        observation_space=WarlockEnv.shop_observation_space,
+                    )
             else:
                 new_policy = algorithm.add_policy(
                     policy_id=new_pol_id,
@@ -110,21 +112,23 @@ class SelfPlayCallback(DefaultCallbacks):
                     action_space=WarlockEnv.round_action_space,
                     observation_space=WarlockEnv.round_observation_space,
                 )
-                new_shop_policy = algorithm.add_policy(
-                    policy_id=new_pol_id + "_shop",
-                    policy_cls=type(main_shop_policy),
-                    policy_mapping_fn=policy_mapping_fn,
-                    action_space=WarlockEnv.shop_action_space,
-                    observation_space=WarlockEnv.shop_observation_space,
-                )
+                if not RANDOM_SHOP:
+                    new_shop_policy = algorithm.add_policy(
+                        policy_id=new_pol_id + "_shop",
+                        policy_cls=type(main_shop_policy),
+                        policy_mapping_fn=policy_mapping_fn,
+                        action_space=WarlockEnv.shop_action_space,
+                        observation_space=WarlockEnv.shop_observation_space,
+                    )
 
             # Set the weights of the new policy to the main policy.
             # We'll keep training the main policy, whereas `new_pol_id` will
             # remain fixed.
             main_state = main_policy.get_state()
             new_policy.set_state(main_state)
-            main_shop_state = main_shop_policy.get_state()
-            new_shop_policy.set_state(main_shop_state)
+            if not RANDOM_SHOP:
+                main_shop_state = main_shop_policy.get_state()
+                new_shop_policy.set_state(main_shop_state)
             # We need to sync the just copied local weights (from main policy)
             # to all the remote workers as well.
             print("good enough; updating model ...")
@@ -155,12 +159,12 @@ algo = (
     .rollouts(
         num_rollout_workers=32,
         num_envs_per_worker=2,
-        rollout_fragment_length=512,
-        # rollout_fragment_length=44,
+        # rollout_fragment_length=512,
+        rollout_fragment_length=44,
     )
     .resources(
-        num_gpus=1,
-        num_gpus_per_learner_worker=1,
+        # num_gpus=1,
+        # num_gpus_per_learner_worker=1,
         # num_gpus_per_worker=0.03,
         num_cpus_per_worker=0.95,
     )
@@ -181,12 +185,13 @@ algo = (
             },
             #"vf_share_layers": True,
         },
-        # sgd_minibatch_size=64,
-        # train_batch_size=44 * 32 * 2,
-        # num_sgd_iter=4,
-        train_batch_size=32768,
-        sgd_minibatch_size=32768,
-        # lr=5e-5,
+        sgd_minibatch_size=64,
+        train_batch_size=44 * 32 * 2,
+        num_sgd_iter=4,
+        # train_batch_size=32768,
+        # sgd_minibatch_size=32768,
+        # lr=5e-4,
+        # num_sgd_iter=100,
         # lr_schedule=[[0, 8e-5], [20_000, 4e-5], [1_200_000, 3e-5]],
     )
     .evaluation(
@@ -203,6 +208,10 @@ algo = (
                 observation_space=WarlockEnv.round_observation_space,
             ),
             "main_shop": PolicySpec(
+                policy_class=RandomPolicy,
+                action_space=WarlockEnv.shop_action_space,
+                observation_space=WarlockEnv.shop_observation_space,
+            ) if RANDOM_SHOP else PolicySpec(
                 action_space=WarlockEnv.shop_action_space,
                 observation_space=WarlockEnv.shop_observation_space,
             ),
@@ -218,7 +227,7 @@ algo = (
             ),
         },
         policy_mapping_fn=policy_mapping_fn,
-        policies_to_train=["main", "main_shop"],
+        policies_to_train=["main"] + ([] if RANDOM_SHOP else ["main_shop"]),
     )
     .rl_module(
         _enable_rl_module_api=False,
@@ -229,6 +238,10 @@ algo = (
                     observation_space=WarlockEnv.round_observation_space,
                 ),
                 "main_shop": SingleAgentRLModuleSpec(
+                    module_class=RandomRLModule,
+                    action_space=WarlockEnv.shop_action_space,
+                    observation_space=WarlockEnv.shop_observation_space,
+                ) if RANDOM_SHOP else SingleAgentRLModuleSpec(
                     action_space=WarlockEnv.shop_action_space,
                     observation_space=WarlockEnv.shop_observation_space,
                 ),

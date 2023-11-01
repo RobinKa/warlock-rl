@@ -151,14 +151,19 @@ def state_to_action_mask(state: dict, self_player_index: int) -> np.ndarray:
         )
         return game_time >= ready_time
 
-    action_mask = [1] * 6 + [
-        1 if can_use_ability(self_entity_id, ability_id) else 0
-        for ability_id in ABILITY_IDS
-    ]
+    action_mask = (
+        [
+            1 if can_use_ability(self_entity_id, ability_id) else 0
+            for ability_id in ABILITY_IDS
+        ]
+        + [1] * 3
+        + [1] * 2
+        + [1] * 2
+    )
 
-    action_mask = np.array(action_mask, np.float32)
+    action_mask = np.array(action_mask, np.int8)
 
-    assert action_mask.shape == WarlockEnv.round_action_space.shape, action_mask.shape
+    # assert action_mask.shape == WarlockEnv.round_action_space.shape
     assert all(0 <= o <= 1 for o in action_mask), action_mask
 
     return action_mask
@@ -207,41 +212,21 @@ def state_to_shop_action_mask(state: dict, self_player_index: int) -> np.ndarray
     return action_mask
 
 
-def calculate_reward(old_state, new_state, self_player_index, other_player_index):
-    self_entity_id = index_to_entity_id[self_player_index]
-    other_entity_id = index_to_entity_id[other_player_index]
-    reward = (
-        (
-            old_state["healths"][other_entity_id]["current"]
-            - new_state["healths"][other_entity_id]["current"]
-        )
-        + (
-            new_state["healths"][self_entity_id]["current"]
-            - old_state["healths"][self_entity_id]["current"]
-        )
-    ) / 100
-
-    # Reward for teleporting on platform.
-    # Negative for self to avoid non-zero-sum reward.
-    # TODO: Anneal this down?
-
-    return reward
-
-
 def action_to_order(
-    player_index: int, state: dict, action: Sequence[float]
+    player_index: int, state: dict, action: dict[str, int | Sequence[float]]
 ) -> dict | None:
     player_entity_id = index_to_entity_id[player_index]
 
     # Target location
     target = {
-        "e1": OBS_LOC_SCALE * (action[0] - 0.5),
-        "e2": OBS_LOC_SCALE * (action[1] - 0.5),
+        "e1": OBS_LOC_SCALE * (action["target_location"][0] - 0.5),
+        "e2": OBS_LOC_SCALE * (action["target_location"][1] - 0.5),
     }
 
     # Add enemy location to target.
     # Also make the offset much smaller.
-    is_target_offset_from_enemy = action[2] >= 0.5
+    is_target_offset_from_enemy = action["target_type"] == 1
+
     if is_target_offset_from_enemy:
         enemy_index = 1 - player_index  # TODO
         enemy_entity_id = index_to_entity_id[enemy_index]
@@ -252,7 +237,7 @@ def action_to_order(
         target["e2"] += enemy_location["e2"]
 
     # Chosen action
-    action_type = np.argmax(action[3:])
+    action_type = action["action_type"]
 
     match action_type:
         case 0:
@@ -342,26 +327,38 @@ class WarlockEnv(MultiAgentEnv):
     # Actions:
     # 0: x
     # 1: y
-    # 2: Is x,y offset from enemy?
-    # 3: Nothing
-    # 4: Stop
-    # 5: Move
-    # 6: Shoot
-    # 7: Teleport
-    # 8: Swap
-    # 9: Scourge
-    # 10: Homing
-    # 11: Shield
-    # 12: Cluster
+    # 2: Is x,y global?
+    # 3: Is x,y offset from enemy?
+    # 4: Nothing
+    # 5: Stop
+    # 6: Move
+    # 7: Shoot
+    # 8: Teleport
+    # 9: Swap
+    # 10: Scourge
+    # 11: Homing
+    # 12: Shield
+    # 13: Cluster
     round_num_obs = 1 + 2 * (7 + len(ABILITY_IDS)) + NUM_PROJECTILES * 3
-    round_num_actions = 6 + len(ABILITY_IDS)
-    round_action_space = gym.spaces.Box(0, 1, (round_num_actions,))
+    round_num_actions = 7 + len(ABILITY_IDS)
+    round_action_space = gym.spaces.Dict(
+        {
+            "action_type": gym.spaces.Discrete(
+                3 + len(ABILITY_IDS),
+            ),
+            "target_location": gym.spaces.Box(0, 1, (2,)),
+            "target_type": gym.spaces.Discrete(2),
+        }
+    )
     round_observation_space = gym.spaces.Dict(
         {
             "obs": gym.spaces.Box(0, 1, (round_num_obs,)),
-            "action_mask": gym.spaces.Box(0, 1, (round_num_actions,)),
+            "action_mask": gym.spaces.MultiBinary(
+                round_num_actions,
+            ),
         },
     )
+    # round_observation_space =gym.spaces.Box(0, 1, (round_num_obs,))
 
     shop_num_obs = 1 + len(ABILITY_IDS)
     shop_num_actions = 1 + len(ABILITY_IDS)
@@ -369,9 +366,10 @@ class WarlockEnv(MultiAgentEnv):
     shop_observation_space = gym.spaces.Dict(
         {
             "obs": gym.spaces.Box(0, 1, (shop_num_obs,)),
-            "action_mask": gym.spaces.Box(0, 1, (shop_num_actions,)),
+            "action_mask": gym.spaces.MultiBinary(shop_num_actions),
         }
     )
+    # shop_observation_space = gym.spaces.Box(0, 1, (shop_num_obs,))
 
     def __init__(self, *args, num_players: int = 2, **kwargs) -> None:
         assert num_players == 2  # TODO: support different number of players
@@ -397,6 +395,7 @@ class WarlockEnv(MultiAgentEnv):
                 "obs": state_to_obs(self._game.state, i, 1 - i),
                 "action_mask": state_to_action_mask(self._game.state, i),
             }
+            # i: state_to_obs(self._game.state, i, 1 - i)
             for i in range(self.num_players)
         }
 
@@ -407,6 +406,7 @@ class WarlockEnv(MultiAgentEnv):
                 "obs": state_to_shop_obs(self._game.state, i, 1 - i),
                 "action_mask": state_to_shop_action_mask(self._game.state, i),
             }
+            # f"shop_{i}": state_to_shop_obs(self._game.state, i, 1 - i)
             for i in range(self.num_players)
         }
 
@@ -447,7 +447,8 @@ class WarlockEnv(MultiAgentEnv):
         return d
 
     def step(
-        self, actions: dict[int, Sequence[float]]
+        self,
+        actions: dict[int | str, dict[str, int | Sequence[float]] | int],
     ) -> tuple[Any, SupportsFloat, bool, bool, dict[str, Any]]:
         if self.shopping:
             assert set(actions.keys()) == {"shop_0", "shop_1"}
