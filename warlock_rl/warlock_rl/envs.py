@@ -152,13 +152,13 @@ def state_to_action_mask(state: dict, self_player_index: int) -> np.ndarray:
         return game_time >= ready_time
 
     action_mask = (
-        [
+        [1] * 3 # nothing, stop, move
+        + [
             1 if can_use_ability(self_entity_id, ability_id) else 0
             for ability_id in ABILITY_IDS
-        ]
-        + [1] * 3
-        + [1] * 2
-        + [1] * 2
+        ] # abilities
+        + [1] * 2 # xy (unused)
+        + [1] * 2 # target type (unused)
     )
 
     action_mask = np.array(action_mask, np.int8)
