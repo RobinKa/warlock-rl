@@ -18,7 +18,7 @@ from warlock_rl.envs import MAX_ROUNDS, WarlockEnv
 from warlock_rl.models import TorchFrameStackingModel
 
 WIN_RATE_THRESHOLD = 0.95
-RANDOM_SHOP = False
+RANDOM_SHOP = True
 
 ModelCatalog.register_custom_model(
     "frame_stack_model",
@@ -169,6 +169,7 @@ algo = (
         num_cpus_per_worker=0.95,
     )
     .training(
+        gamma = 1.0,
         _enable_learner_api=False,
         # clip_param=0.1,
         model={
@@ -188,6 +189,7 @@ algo = (
         sgd_minibatch_size=64,
         train_batch_size=44 * 32 * 2,
         num_sgd_iter=4,
+
         # train_batch_size=32768,
         # sgd_minibatch_size=32768,
         # lr=5e-4,

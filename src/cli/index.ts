@@ -10,6 +10,7 @@ export type CLICommandStartGame = {
   seed?: number;
   deltaTime?: number;
   numPlayers: number;
+  startGold?: number;
 };
 
 export type CLICommandStep = {
@@ -66,7 +67,7 @@ for await (const line of console) {
       });
 
       for (let i = 0; i < command.numPlayers; i++) {
-        game.addPlayer();
+        game.addPlayer(command.startGold);
       }
       break;
     case "setOrder":

@@ -50,7 +50,7 @@ export const makeGame = ({ deltaTime, seed }: MakeGameOptions) => {
     gameSystem(components);
   }
 
-  function addPlayer(): number {
+  function addPlayer(startGold?: number): number {
     const {
       gameState,
       players,
@@ -68,7 +68,7 @@ export const makeGame = ({ deltaTime, seed }: MakeGameOptions) => {
     players[entityId] = { ready: false };
 
     shops[entityId] = {
-      gold: 20,
+      gold: startGold ?? 20,
       costs: {
         shoot: 5,
         scourge: 10,

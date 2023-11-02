@@ -24,8 +24,8 @@ class TorchFrameStackingModel(TorchModelV2, nn.Module):
             obs_space, action_space, None, model_config, name
         )
         if isinstance(action_space, gym.spaces.Dict):
-            # 8 abilities + 3 orders (nothing + move + stop) + xy (4) + target (2)
-            assert num_outputs == 17
+            # 8 abilities + 3 orders (nothing + move + stop) + 2*xyxy (4) + 2*target (2)
+            assert num_outputs == 23
 
         self.num_frames = num_frames
         self.num_outputs = num_outputs
@@ -86,7 +86,7 @@ class TorchFrameStackingModel(TorchModelV2, nn.Module):
         inf_mask = torch.clamp(torch.log(action_mask), min=FLOAT_MIN)
 
         if isinstance(self.action_space, gym.spaces.Dict):
-            out[..., :8+3] += inf_mask[..., :8+3]
+            out[..., :inf_mask.shape[-1]] += inf_mask
         else:
             out += inf_mask
 

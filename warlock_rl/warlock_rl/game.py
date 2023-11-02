@@ -31,6 +31,7 @@ class CLICommandStartGame:
     type: Literal["start"] = "start"
     seed: int | None = None
     deltaTime: float | None = None
+    startGold: int | None = None
 
 
 @dataclass_json
@@ -90,7 +91,13 @@ class Game:
         self._state = None
         self._game_id = None
 
-    def start(self, num_players: int, seed: int | None, logging: bool = True):
+    def start(
+        self,
+        num_players: int,
+        start_gold: int | None,
+        seed: int | None,
+        logging: bool = True,
+    ):
         if self._game_id is not None:
             self._state_history.clear()
         self._logging = logging
@@ -98,7 +105,9 @@ class Game:
         self._game_id = str(uuid.uuid4())
         print("Starting game", self._game_id, "with seed", seed)
 
-        self._send_command(CLICommandStartGame(seed=seed, numPlayers=num_players))
+        self._send_command(
+            CLICommandStartGame(seed=seed, numPlayers=num_players, startGold=start_gold)
+        )
 
         # Read initial state
         self._read_state()

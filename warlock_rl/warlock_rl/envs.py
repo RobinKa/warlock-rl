@@ -10,10 +10,12 @@ OBS_LOC_SCALE = 2_000
 OBS_RELATIVE_LOC_SCALE = 500
 ROUND_TIME_SCALE = 180
 NUM_PROJECTILES = 3
-MAX_ROUNDS = 5
+MAX_ROUNDS = 1
 PLAYER_OBS_SIZE = 11
 PROJECTILE_OBS_SIZE = 6
 MAX_ARENA_RADIUS = 32 * 15
+START_GOLD_RANGE = (10, 80)
+SHOP_FRAMES = 5
 
 index_to_entity_id = {
     0: "1000",
@@ -69,7 +71,7 @@ def state_to_obs(
         facing_y = np.sin(state["bodies"][entity_id]["facing"])
         casting = 1 if state["units"][entity_id]["state"]["type"] == "casting" else 0
         moving = 1 if state["units"][entity_id]["state"]["type"] == "moving" else 0
-        distance_to_center = np.sqrt(x*x+y*y)
+        distance_to_center = np.sqrt(x * x + y * y)
         ability_cooldowns = [
             get_ability_relative_cooldown(entity_id, ability_id)
             for ability_id in ABILITY_IDS
@@ -181,13 +183,12 @@ def state_to_action_mask(state: dict, self_player_index: int) -> np.ndarray:
             1 if can_use_ability(self_entity_id, ability_id) else 0
             for ability_id in ABILITY_IDS
         ]  # abilities
-        + [1] * 2  # xy (unused)
-        + [1] * 2  # target type (unused)
     )
 
     action_mask = np.array(action_mask, np.int8)
 
     # assert action_mask.shape == WarlockEnv.round_action_space.shape
+    assert action_mask.shape[0] == WarlockEnv.action_mask_size
     assert all(0 <= o <= 1 for o in action_mask), action_mask
 
     return action_mask
@@ -241,17 +242,27 @@ def action_to_order(
 ) -> dict | None:
     player_entity_id = index_to_entity_id[player_index]
 
+    # Chosen action
+    action_type = action["action_type"]
+
     # Target location
-    target = {
-        "e1": OBS_LOC_SCALE * (action["target_location"][0] - 0.5),
-        "e2": OBS_LOC_SCALE * (action["target_location"][1] - 0.5),
+    move_target = {
+        "e1": OBS_LOC_SCALE * (action["move_target_location"][0] - 0.5),
+        "e2": OBS_LOC_SCALE * (action["move_target_location"][1] - 0.5),
     }
+    cast_target = {
+        "e1": OBS_LOC_SCALE * (action["cast_target_location"][0] - 0.5),
+        "e2": OBS_LOC_SCALE * (action["cast_target_location"][1] - 0.5),
+    }
+    target = move_target if action_type == 2 else cast_target
 
     # Add enemy location to target.
     # Also make the offset much smaller.
-    is_target_offset_from_enemy = action["target_type"] == 1
-
-    if is_target_offset_from_enemy:
+    move_is_target_offset_from_enemy = action["move_target_type"] == 1
+    cast_is_target_offset_from_enemy = action["cast_target_type"] == 1
+    if (move_is_target_offset_from_enemy and action_type == 2) or (
+        cast_is_target_offset_from_enemy and action_type != 2
+    ):
         enemy_index = 1 - player_index  # TODO
         enemy_entity_id = index_to_entity_id[enemy_index]
         enemy_location = state["bodies"][enemy_entity_id]["location"]
@@ -259,9 +270,6 @@ def action_to_order(
         target["e2"] * 0.2
         target["e1"] += enemy_location["e1"]
         target["e2"] += enemy_location["e2"]
-
-    # Chosen action
-    action_type = action["action_type"]
 
     match action_type:
         case 0:
@@ -368,21 +376,23 @@ class WarlockEnv(MultiAgentEnv):
         + 2 * (PLAYER_OBS_SIZE + len(ABILITY_IDS))
         + NUM_PROJECTILES * PROJECTILE_OBS_SIZE
     )
-    round_num_actions = 7 + len(ABILITY_IDS)
+    action_mask_size = 3 + len(ABILITY_IDS)
     round_action_space = gym.spaces.Dict(
         {
             "action_type": gym.spaces.Discrete(
                 3 + len(ABILITY_IDS),
             ),
-            "target_location": gym.spaces.Box(0, 1, (2,)),
-            "target_type": gym.spaces.Discrete(2),
+            "move_target_location": gym.spaces.Box(0, 1, (2,)),
+            "cast_target_location": gym.spaces.Box(0, 1, (2,)),
+            "move_target_type": gym.spaces.Discrete(2),
+            "cast_target_type": gym.spaces.Discrete(2),
         }
     )
     round_observation_space = gym.spaces.Dict(
         {
             "obs": gym.spaces.Box(0, 1, (round_num_obs,)),
             "action_mask": gym.spaces.MultiBinary(
-                round_num_actions,
+                action_mask_size,
             ),
         },
     )
@@ -462,7 +472,10 @@ class WarlockEnv(MultiAgentEnv):
             self._game.log_game()
 
         self._game.start(
-            num_players=self.num_players, seed=seed, logging=np.random.random() < 0.03
+            num_players=self.num_players,
+            start_gold=np.random.randint(*START_GOLD_RANGE),
+            seed=seed,
+            logging=np.random.random() < 0.03,
         )
 
         return self._make_obs(), {}
@@ -493,7 +506,7 @@ class WarlockEnv(MultiAgentEnv):
             assert self.shopping
 
             # Set ready after a few shop frames
-            if self.shop_frames >= 3:
+            if self.shop_frames >= SHOP_FRAMES:
                 for player_id in self._game.state["players"].keys():
                     self._game.set_ready(player_id, True)
                 self._game.step(1)
