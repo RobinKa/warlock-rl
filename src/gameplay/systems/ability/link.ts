@@ -70,7 +70,7 @@ export const linkDefinition: AbilityDefinition = {
       }
 
       dealDamage(entityId, components, {
-        amount: 12 * gameState.deltaTime,
+        amount: 1.2 * gameState.deltaTime,
       });
 
       const offset = pga.sub(otherBody.location, body.location);
