@@ -11,7 +11,7 @@ OBS_RELATIVE_LOC_SCALE = 500
 ROUND_TIME_SCALE = 180
 NUM_PROJECTILES = 3
 MAX_ROUNDS = 1
-PLAYER_OBS_SIZE = 11
+PLAYER_OBS_SIZE = 14
 PROJECTILE_OBS_SIZE = 6
 MAX_ARENA_RADIUS = 32 * 15
 START_GOLD_RANGE = (10, 80)
@@ -63,6 +63,7 @@ def state_to_obs(
 
     def get_player_observations(entity_id: str) -> list[float]:
         health = state["healths"][entity_id]["current"]
+        kb_multiplier = state["units"][entity_id]["knockbackMultiplier"]
         x = state["bodies"][entity_id]["location"]["e1"]
         y = state["bodies"][entity_id]["location"]["e2"]
         dx = x - self_x
@@ -72,6 +73,8 @@ def state_to_obs(
         facing_y = np.sin(state["bodies"][entity_id]["facing"])
         casting = 1 if state["units"][entity_id]["state"]["type"] == "casting" else 0
         moving = 1 if state["units"][entity_id]["state"]["type"] == "moving" else 0
+        shielded = 1 if entity_id in state["shields"] else 0
+        linked = 1 if entity_id in state["pulls"] else 0
         distance_to_center = np.sqrt(x * x + y * y)
         ability_cooldowns = [
             get_ability_relative_cooldown(entity_id, ability_id)
@@ -80,6 +83,7 @@ def state_to_obs(
 
         return [
             health / 100,
+            kb_multiplier / 3.0,
             x / OBS_LOC_SCALE + 0.5,
             y / OBS_LOC_SCALE + 0.5,
             dx / OBS_RELATIVE_LOC_SCALE + 0.5,
@@ -89,6 +93,8 @@ def state_to_obs(
             facing_y * 0.5 + 0.5,
             casting,
             moving,
+            shielded,
+            linked,
             distance_to_center / (2 * MAX_ARENA_RADIUS),
             *ability_cooldowns,
         ]
