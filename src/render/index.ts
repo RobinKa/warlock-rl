@@ -175,6 +175,7 @@ function startGame(replay?: GameComponent[]) {
     "t",
     "y",
     "s",
+    "x",
   ]);
   function handleInput() {
     const { x, y } = mousePosition;
@@ -223,6 +224,12 @@ function startGame(replay?: GameComponent[]) {
       components.orders[localPlayerId].order = {
         type: "useAbility",
         abilityId: "gravity",
+        target: { e1: x, e2: y },
+      };
+    } else if (keyStates["x"]) {
+      components.orders[localPlayerId].order = {
+        type: "useAbility",
+        abilityId: "link",
         target: { e1: x, e2: y },
       };
     } else if (keyStates["s"]) {
@@ -287,8 +294,8 @@ function startGame(replay?: GameComponent[]) {
   // Rendering
   const bodyContainers: Record<string, PIXI.Container> = {};
   const REFERENCE_WIDTH = 5_000;
-  app.ticker.minFPS = isReplay ? 240 : 30;
-  app.ticker.maxFPS = isReplay ? 240 : 30;
+  app.ticker.minFPS = 30; //isReplay ? 240 : 30;
+  app.ticker.maxFPS = 30; //isReplay ? 240 : 30;
 
   function render() {
     // Update UI widgets

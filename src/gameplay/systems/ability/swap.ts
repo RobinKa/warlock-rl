@@ -18,7 +18,7 @@ export const swapDefinition: AbilityDefinition = {
       swap: true,
     });
   },
-  postCollision: (components: GameComponent) => {
+  postCollision(components: GameComponent) {
     const {
       detectedCollisions,
       playerOwneds,
@@ -66,12 +66,7 @@ export const swapDefinition: AbilityDefinition = {
       }
     }
   },
-  preAbility: ({
-    projectiles,
-    lifetimes,
-    playerOwneds,
-    bodies,
-  }: GameComponent) => {
+  preAbility({ projectiles, lifetimes, playerOwneds, bodies }: GameComponent) {
     // Check if any swap projectile expired
     for (const [entityId, projectile] of Object.entries(projectiles)) {
       if (

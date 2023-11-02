@@ -44,6 +44,11 @@ export type AbilityGravity = {
   target: "point";
 };
 
+export type AbilityLink = {
+  id: "link";
+  target: "point";
+};
+
 export type Ability = AbilityCommon &
   (
     | AbilityScourge
@@ -54,6 +59,7 @@ export type Ability = AbilityCommon &
     | AbilitySwap
     | AbilityShield
     | AbilityGravity
+    | AbilityLink
   );
 
 export type AbilityId = Ability["id"];

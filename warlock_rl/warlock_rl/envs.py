@@ -33,6 +33,7 @@ ABILITY_IDS = [
     "homing",
     "shield",
     "gravity",
+    "link",
 ]
 
 
@@ -349,6 +350,14 @@ def action_to_order(
                 "abilityId": "gravity",
                 "target": target,
             }
+        case 11:
+            if "link" not in state["abilities"][player_entity_id]:
+                return None
+            return {
+                "type": "useAbility",
+                "abilityId": "link",
+                "target": target,
+            }
 
     raise ValueError(f"Unhandled action {action=} {action_type=}")
 
@@ -356,21 +365,6 @@ def action_to_order(
 class WarlockEnv(MultiAgentEnv):
     _game: Game | None = None
 
-    # Actions:
-    # 0: x
-    # 1: y
-    # 2: Is x,y global?
-    # 3: Is x,y offset from enemy?
-    # 4: Nothing
-    # 5: Stop
-    # 6: Move
-    # 7: Shoot
-    # 8: Teleport
-    # 9: Swap
-    # 10: Scourge
-    # 11: Homing
-    # 12: Shield
-    # 13: Cluster
     round_num_obs = (
         1
         + 2 * (PLAYER_OBS_SIZE + len(ABILITY_IDS))

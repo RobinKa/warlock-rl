@@ -14,6 +14,7 @@ export type ProjectileOptions = {
   homing?: boolean;
   swap?: boolean;
   gravity?: boolean;
+  linkId?: number;
 };
 
 export function createProjectile(
@@ -32,6 +33,7 @@ export function createProjectile(
     homing,
     swap,
     gravity,
+    linkId,
   }: ProjectileOptions
 ) {
   // Spawn projectile
@@ -75,6 +77,7 @@ export function createProjectile(
       swap,
       gravity,
       destroyedOnCollision,
+      linkId,
     };
 
     playerOwneds[projectileEntityId] = { ...playerOwneds[entityId] };

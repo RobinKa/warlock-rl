@@ -24,10 +24,15 @@ type ProjectileComponentGravityPart =
       gravity: true;
     };
 
+type ProjectileComponentLinkPart = {
+  linkId?: number;
+};
+
 export type ProjectileComponent = {
   damage: number;
   knockbackMultiplier?: number;
   destroyedOnCollision?: boolean;
 } & ProjectileComponentHomingPart &
   ProjectileComponentSwapPart &
-  ProjectileComponentGravityPart;
+  ProjectileComponentGravityPart &
+  ProjectileComponentLinkPart;

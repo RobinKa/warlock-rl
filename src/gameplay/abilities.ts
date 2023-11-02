@@ -47,5 +47,11 @@ export function getAbilityDefaults(): AbilitiesComponent {
       cooldown: 21,
       castTime: 0.2,
     },
+    link: {
+      id: "link",
+      target: "point",
+      cooldown: 17,
+      castTime: 0.2,
+    },
   };
 }

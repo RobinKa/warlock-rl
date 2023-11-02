@@ -44,6 +44,7 @@ export const makeGame = ({ deltaTime, seed }: MakeGameOptions) => {
     detectedCollisions: {
       pairs: [],
     },
+    pulls: {},
   };
 
   function step() {
@@ -78,6 +79,7 @@ export const makeGame = ({ deltaTime, seed }: MakeGameOptions) => {
         shield: 12,
         cluster: 14,
         gravity: 12,
+        link: 12,
       },
       orders: [],
     };

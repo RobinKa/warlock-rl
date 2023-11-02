@@ -11,6 +11,7 @@ import { OrderComponent } from "./order";
 import { PlayerComponent } from "./player";
 import { PlayerOwnedComponent } from "./playerowned";
 import { ProjectileComponent } from "./projectile";
+import { PullComponent } from "./pull";
 import { ShieldComponent } from "./shield";
 import { ShopComponent } from "./shop";
 import { UnitComponent } from "./unit";
@@ -31,4 +32,5 @@ export type GameComponent = {
   shields: EntityComponents<ShieldComponent>;
   players: EntityComponents<PlayerComponent>;
   detectedCollisions: SingletonComponent<DetectedCollisionsComponent>;
+  pulls: EntityComponents<PullComponent>;
 };

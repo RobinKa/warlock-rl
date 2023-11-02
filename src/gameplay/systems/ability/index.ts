@@ -7,6 +7,7 @@ import { clusterDefinition } from "./cluster";
 import { AbilityDefinition } from "./definition";
 import { gravityDefinition } from "./gravity";
 import { homingDefinition } from "./homing";
+import { linkDefinition } from "./link";
 import { scourgeDefinition } from "./scourge";
 import { shieldDefinition } from "./shield";
 import { shootDefinition } from "./shoot";
@@ -17,6 +18,7 @@ const definitions: AbilityDefinition[] = [
   // Order of these matters as the order is maintained
   // for collision responses.
   shieldDefinition,
+  linkDefinition,
   swapDefinition,
 
   gravityDefinition,
@@ -58,8 +60,12 @@ function useAbility(
   // Execute the order
   const definition = definitionsById[ability.id];
   if (definition) {
-    definition.onUse?.(parseInt(entityId), components);
-    definition.onUseTarget?.(parseInt(entityId), castOrder.target, components);
+    if ("onUse" in definition) {
+      definition.onUse(parseInt(entityId), components);
+    }
+    if ("onUseTarget" in definition) {
+      definition.onUseTarget(parseInt(entityId), castOrder.target, components);
+    }
   } else {
     console.warn("Unhandled ability", ability);
   }
