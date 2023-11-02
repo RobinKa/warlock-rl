@@ -82,7 +82,7 @@ export const gravityDefinition: AbilityDefinition = {
         if (projectiles[id]?.gravity) {
           if (areEnemies(id, otherId, components)) {
             dealDamage(otherId, components, {
-              amount: 20 * gameState.deltaTime,
+              amount: 2 * gameState.deltaTime,
             });
           }
           pair.handled = true;
