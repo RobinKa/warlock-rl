@@ -1,7 +1,8 @@
 import * as pga from "@/common/ga_zpp";
-import { GameComponent } from "@/gameplay/components";
-import { AbilityDefinition } from "./definition";
+import { dealDamage } from "@/gameplay/damage";
 import { createProjectile } from "@/gameplay/projectile";
+import { areEnemies } from "@/gameplay/team";
+import { AbilityDefinition } from "./definition";
 
 const MAX_RANGE_SQ_PLAYER = Math.pow(550, 2);
 const MAX_RANGE_SQ_PROJECTILE = Math.pow(600, 2);
@@ -12,7 +13,7 @@ export const gravityDefinition: AbilityDefinition = {
   id: "gravity",
   onUseTarget(entityId, target, components) {
     createProjectile(entityId, target, components, {
-      damage: 0.12,
+      damage: 0,
       radius: 250,
       speed: 450,
       lifetime: 2,
@@ -21,21 +22,18 @@ export const gravityDefinition: AbilityDefinition = {
       knockbackMultiplier: 0,
     });
   },
-  preAbility({
-    bodies,
-    projectiles,
-    playerOwneds,
-    players,
-    gameState,
-  }: GameComponent) {
+  preAbility(components) {
+    const { bodies, projectiles, players, gameState } = components;
+
     for (const [entityId, projectile] of Object.entries(projectiles)) {
       const body = bodies[entityId];
       if (projectile.gravity && body) {
-        const owningPlayerId = playerOwneds[entityId]?.owningPlayerId;
         for (const [otherEntityId, otherBody] of Object.entries(bodies)) {
-          const isEnemy =
-            owningPlayerId === undefined ||
-            playerOwneds[otherEntityId]?.owningPlayerId !== owningPlayerId;
+          const isEnemy = areEnemies(
+            parseInt(entityId),
+            parseInt(otherEntityId),
+            components
+          );
 
           const isPlayer = otherEntityId in players;
           const isProjectile = otherEntityId in projectiles;
@@ -74,6 +72,25 @@ export const gravityDefinition: AbilityDefinition = {
           }
         }
       }
+    }
+  },
+  postCollision(components) {
+    const { detectedCollisions, projectiles, gameState } = components;
+
+    for (const pair of Object.values(detectedCollisions.pairs)) {
+      function handleGravity(id: number, otherId: number) {
+        if (projectiles[id]?.gravity) {
+          if (areEnemies(id, otherId, components)) {
+            dealDamage(otherId, components, {
+              amount: 20 * gameState.deltaTime,
+            });
+          }
+          pair.handled = true;
+        }
+      }
+
+      handleGravity(pair.idA, pair.idB);
+      handleGravity(pair.idB, pair.idA);
     }
   },
 };
