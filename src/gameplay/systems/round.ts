@@ -16,7 +16,7 @@ function resetGame(components: GameComponent) {
   } = components;
   // Remove projectiles
   for (const projectileId in projectiles) {
-    lifetimes[projectileId].remainingFrames = 0;
+    lifetimes[projectileId] = { remainingFrames: 0 };
   }
 
   // Reset arena

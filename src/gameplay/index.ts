@@ -76,6 +76,7 @@ export const makeGame = ({ deltaTime, seed }: MakeGameOptions) => {
         teleport: 12,
         swap: 11,
         homing: 11,
+        boomerang: 11,
         shield: 12,
         cluster: 14,
         gravity: 12,

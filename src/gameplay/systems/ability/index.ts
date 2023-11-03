@@ -3,6 +3,7 @@ import { Ability, AbilityId } from "@/gameplay/components/abilities";
 import { GameStateComponent } from "@/gameplay/components/gamestate";
 import { OrderUseAbility } from "@/gameplay/components/order";
 import { turnToTarget } from "@/gameplay/systems/movement";
+import { boomerangDefinition } from "./boomerang";
 import { clusterDefinition } from "./cluster";
 import { AbilityDefinition } from "./definition";
 import { gravityDefinition } from "./gravity";
@@ -18,6 +19,7 @@ const definitions: AbilityDefinition[] = [
   // Order of these matters as the order is maintained
   // for collision responses.
   shieldDefinition,
+  boomerangDefinition,
   linkDefinition,
   swapDefinition,
 

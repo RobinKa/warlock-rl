@@ -34,6 +34,7 @@ ABILITY_IDS = [
     "shield",
     "gravity",
     "link",
+    "boomerang",
 ]
 
 
@@ -362,6 +363,14 @@ def action_to_order(
             return {
                 "type": "useAbility",
                 "abilityId": "link",
+                "target": target,
+            }
+        case 12:
+            if "boomerang" not in state["abilities"][player_entity_id]:
+                return None
+            return {
+                "type": "useAbility",
+                "abilityId": "boomerang",
                 "target": target,
             }
 

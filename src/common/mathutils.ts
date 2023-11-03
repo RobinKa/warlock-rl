@@ -4,6 +4,21 @@ export function signedAngleDifference(a: number, b: number): number {
   return ((b - a + 3 * Math.PI) % (2 * Math.PI)) - Math.PI;
 }
 
+export function getDistanceSquared(
+  a: pga.BladeE1 & pga.BladeE2,
+  b: pga.BladeE1 & pga.BladeE2
+) {
+  const offset = pga.sub(a, b);
+  return pga.innerProduct(offset, offset).scalar;
+}
+
+export function getDistance(
+  a: pga.BladeE1 & pga.BladeE2,
+  b: pga.BladeE1 & pga.BladeE2
+) {
+  return Math.sqrt(getDistanceSquared(a, b));
+}
+
 export function normalized(
   v: pga.BladeE1 & pga.BladeE2
 ): pga.BladeE1 & pga.BladeE2 {

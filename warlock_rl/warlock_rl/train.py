@@ -18,7 +18,7 @@ from warlock_rl.envs import MAX_ROUNDS, WarlockEnv
 from warlock_rl.models import TorchFrameStackingModel
 
 WIN_RATE_THRESHOLD = 0.95
-RANDOM_SHOP = True
+RANDOM_SHOP = False
 
 ModelCatalog.register_custom_model(
     "frame_stack_model",

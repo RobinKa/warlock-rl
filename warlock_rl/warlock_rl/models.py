@@ -1,5 +1,4 @@
 import gymnasium as gym
-import numpy as np
 from ray.rllib.models.torch.misc import SlimFC, normc_initializer
 from ray.rllib.models.torch.torch_modelv2 import TorchModelV2
 from ray.rllib.policy.view_requirement import ViewRequirement
@@ -24,8 +23,8 @@ class TorchFrameStackingModel(TorchModelV2, nn.Module):
             obs_space, action_space, None, model_config, name
         )
         if isinstance(action_space, gym.spaces.Dict):
-            # 9 abilities + 3 orders (nothing + move + stop) + 2*xyxy (4) + 2*target (2)
-            assert num_outputs == 24
+            # 10 abilities + 3 orders (nothing + move + stop) + 2*xyxy (4) + 2*target (2)
+            assert num_outputs == 25
 
         self.num_frames = num_frames
         self.num_outputs = num_outputs
@@ -86,7 +85,7 @@ class TorchFrameStackingModel(TorchModelV2, nn.Module):
         inf_mask = torch.clamp(torch.log(action_mask), min=FLOAT_MIN)
 
         if isinstance(self.action_space, gym.spaces.Dict):
-            out[..., :inf_mask.shape[-1]] += inf_mask
+            out[..., : inf_mask.shape[-1]] += inf_mask
         else:
             out += inf_mask
 

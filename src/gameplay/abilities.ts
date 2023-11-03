@@ -24,6 +24,12 @@ export function getAbilityDefaults(): AbilitiesComponent {
       cooldown: 15,
       castTime: 0.2,
     },
+    boomerang: {
+      id: "boomerang",
+      target: "point",
+      cooldown: 16,
+      castTime: 0.2,
+    },
     scourge: {
       id: "scourge",
       target: "none",

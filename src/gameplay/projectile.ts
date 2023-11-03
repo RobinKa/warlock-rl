@@ -6,7 +6,7 @@ export type ProjectileOptions = {
   damage: number;
   radius: number;
   speed: number;
-  lifetime: number;
+  lifetime?: number;
   count?: number;
   spread?: number;
   knockbackMultiplier?: number;
@@ -15,6 +15,7 @@ export type ProjectileOptions = {
   swap?: boolean;
   gravity?: boolean;
   linkId?: number;
+  boomerang?: boolean;
 };
 
 export function createProjectile(
@@ -34,6 +35,7 @@ export function createProjectile(
     swap,
     gravity,
     linkId,
+    boomerang,
   }: ProjectileOptions
 ) {
   // Spawn projectile
@@ -43,6 +45,7 @@ export function createProjectile(
     pga.innerProduct(bodyLocationToTarget, bodyLocationToTarget).scalar
   );
   const castDirection = pga.div(bodyLocationToTarget, distance);
+  const entityIds = [];
   for (let i = 0; i < count; i++) {
     // 1: 0.5
     // 2: 0, 1
@@ -56,10 +59,13 @@ export function createProjectile(
     const velocity = pga.multiply(direction, speed);
 
     const projectileEntityId = gameState.nextEntityId++;
+    entityIds.push(projectileEntityId);
 
-    lifetimes[projectileEntityId] = {
-      remainingFrames: Math.ceil(lifetime / gameState.deltaTime),
-    };
+    if (lifetime !== undefined) {
+      lifetimes[projectileEntityId] = {
+        remainingFrames: Math.ceil(lifetime / gameState.deltaTime),
+      };
+    }
 
     bodies[projectileEntityId] = {
       location,
@@ -80,6 +86,44 @@ export function createProjectile(
       linkId,
     };
 
+    if (boomerang) {
+      const boomerangDistance = Math.min(800, Math.max(300, distance));
+      const perpDir = rotate(castDirection, Math.PI / 2);
+      const parAcc = -Math.pow(1500, 2) / (2 * boomerangDistance);
+      const perpAcc = (2 * parAcc * 300) / 1500;
+
+      bodies[projectileEntityId].velocity = pga.add(
+        pga.multiply(castDirection, 1500),
+        pga.multiply(perpDir, 300)
+      );
+
+      const acceleration = pga.add(
+        pga.multiply(castDirection, parAcc),
+        pga.multiply(perpDir, perpAcc)
+      );
+      const changedAcceleration = pga.sub(
+        pga.multiply(castDirection, parAcc),
+        pga.multiply(perpDir, perpAcc)
+      );
+
+      const gameTime = gameState.frameNumber * gameState.deltaTime;
+      const changeAccelerationTime = -1500 / parAcc;
+      const stopAccelerationTime = changeAccelerationTime - 0.15;
+
+      projectiles[projectileEntityId] = {
+        ...projectiles[projectileEntityId],
+        boomerang: true,
+        state: "initial",
+        acceleration,
+        changedAcceleration,
+        changeAccelerationTime: gameTime + changeAccelerationTime,
+        stopAccelerationTime:
+          gameTime + changeAccelerationTime + stopAccelerationTime,
+      };
+    }
+
     playerOwneds[projectileEntityId] = { ...playerOwneds[entityId] };
   }
+
+  return entityIds;
 }
