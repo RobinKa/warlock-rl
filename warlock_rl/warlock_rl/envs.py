@@ -6,13 +6,14 @@ from ray.rllib.env.multi_agent_env import MultiAgentEnv
 
 from warlock_rl.game import Game
 
-OBS_LOC_SCALE = 2_000
-OBS_RELATIVE_LOC_SCALE = 500
+OBS_LOC_RANGE = 2_000
+OBS_RELATIVE_LOC_RANGE = 500
+OBS_VELOCITY_RANGE = 4000
 ROUND_TIME_SCALE = 180
-NUM_PROJECTILES = 3
+NUM_PROJECTILES = 5
 MAX_ROUNDS = 1
-PLAYER_OBS_SIZE = 14
-PROJECTILE_OBS_SIZE = 6
+PLAYER_OBS_SIZE = 16
+PROJECTILE_OBS_SIZE = 13
 MAX_ARENA_RADIUS = 32 * 15
 START_GOLD_RANGE = (10, 80)
 SHOP_FRAMES = 5
@@ -69,6 +70,8 @@ def state_to_obs(
         y = state["bodies"][entity_id]["location"]["e2"]
         dx = x - self_x
         dy = y - self_y
+        vx = state["bodies"][entity_id]["velocity"]["e1"]
+        vy = state["bodies"][entity_id]["velocity"]["e2"]
         dist = np.sqrt(dx * dx + dy * dy)
         facing_x = np.cos(state["bodies"][entity_id]["facing"])
         facing_y = np.sin(state["bodies"][entity_id]["facing"])
@@ -85,11 +88,13 @@ def state_to_obs(
         return [
             health / 100,
             kb_multiplier / 3.0,
-            x / OBS_LOC_SCALE + 0.5,
-            y / OBS_LOC_SCALE + 0.5,
-            dx / OBS_RELATIVE_LOC_SCALE + 0.5,
-            dy / OBS_RELATIVE_LOC_SCALE + 0.5,
-            dist / OBS_RELATIVE_LOC_SCALE,
+            x / OBS_LOC_RANGE + 0.5,
+            y / OBS_LOC_RANGE + 0.5,
+            dx / OBS_RELATIVE_LOC_RANGE + 0.5,
+            dy / OBS_RELATIVE_LOC_RANGE + 0.5,
+            vx / OBS_VELOCITY_RANGE + 0.5,
+            vy / OBS_VELOCITY_RANGE + 0.5,
+            dist / OBS_RELATIVE_LOC_RANGE,
             facing_x * 0.5 + 0.5,
             facing_y * 0.5 + 0.5,
             casting,
@@ -105,17 +110,31 @@ def state_to_obs(
         y = state["bodies"][entity_id]["location"]["e2"]
         dx = x - self_x
         dy = y - self_y
+        vx = state["bodies"][entity_id]["velocity"]["e1"]
+        vy = state["bodies"][entity_id]["velocity"]["e2"]
         dist = np.sqrt(dx * dx + dy * dy)
+        is_homing = state["projectiles"][entity_id].get("homing", False)
+        is_boomerang = state["projectiles"][entity_id].get("boomerang", False)
+        is_swap = state["projectiles"][entity_id].get("swap", False)
+        is_gravity = state["projectiles"][entity_id].get("gravity", False)
+        is_link = state["projectiles"][entity_id].get("link", False)
         is_enemy = (
             state["playerOwneds"][entity_id]["owningPlayerId"]
             != state["playerOwneds"][self_entity_id]["owningPlayerId"]
         )
         return [
-            x / OBS_LOC_SCALE + 0.5,
-            y / OBS_LOC_SCALE + 0.5,
-            dx / OBS_RELATIVE_LOC_SCALE + 0.5,
-            dy / OBS_RELATIVE_LOC_SCALE + 0.5,
-            dist / OBS_RELATIVE_LOC_SCALE,
+            x / OBS_LOC_RANGE + 0.5,
+            y / OBS_LOC_RANGE + 0.5,
+            dx / OBS_RELATIVE_LOC_RANGE + 0.5,
+            dy / OBS_RELATIVE_LOC_RANGE + 0.5,
+            vx / OBS_VELOCITY_RANGE + 0.5,
+            vy / OBS_VELOCITY_RANGE + 0.5,
+            dist / OBS_RELATIVE_LOC_RANGE,
+            1 if is_homing else 0,
+            1 if is_boomerang else 0,
+            1 if is_swap else 0,
+            1 if is_gravity else 0,
+            1 if is_link else 0,
             1 if is_enemy else 0,
         ]
 
@@ -129,7 +148,7 @@ def state_to_obs(
         key=lambda x: distance_squared_to_self(state["bodies"][x[0]]["location"]),
     )
 
-    projectile_obs = [[0.5] * PROJECTILE_OBS_SIZE for _ in range(3)]
+    projectile_obs = [[0.5] * PROJECTILE_OBS_SIZE for _ in range(NUM_PROJECTILES)]
     for i, (projectile_id, _) in enumerate(sorted_projectiles[: len(projectile_obs)]):
         projectile_obs[i] = get_projectile_observations(projectile_id)
 
@@ -145,10 +164,9 @@ def state_to_obs(
         ]
         + get_player_observations(self_entity_id)
         + get_player_observations(other_entity_id)
-        + projectile_obs[0]
-        + projectile_obs[1]
-        + projectile_obs[2]
     )
+    for projectile_ob in projectile_obs:
+        observations += projectile_ob
 
     obs = np.clip(
         np.array(
@@ -255,12 +273,12 @@ def action_to_order(
 
     # Target location
     move_target = {
-        "e1": OBS_LOC_SCALE * (action["move_target_location"][0] - 0.5),
-        "e2": OBS_LOC_SCALE * (action["move_target_location"][1] - 0.5),
+        "e1": OBS_LOC_RANGE * (action["move_target_location"][0] - 0.5),
+        "e2": OBS_LOC_RANGE * (action["move_target_location"][1] - 0.5),
     }
     cast_target = {
-        "e1": OBS_LOC_SCALE * (action["cast_target_location"][0] - 0.5),
-        "e2": OBS_LOC_SCALE * (action["cast_target_location"][1] - 0.5),
+        "e1": OBS_LOC_RANGE * (action["cast_target_location"][0] - 0.5),
+        "e2": OBS_LOC_RANGE * (action["cast_target_location"][1] - 0.5),
     }
     target = move_target if action_type == 2 else cast_target
 

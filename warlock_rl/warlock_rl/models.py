@@ -22,9 +22,6 @@ class TorchFrameStackingModel(TorchModelV2, nn.Module):
         super(TorchFrameStackingModel, self).__init__(
             obs_space, action_space, None, model_config, name
         )
-        if isinstance(action_space, gym.spaces.Dict):
-            # 10 abilities + 3 orders (nothing + move + stop) + 2*xyxy (4) + 2*target (2)
-            assert num_outputs == 25
 
         self.num_frames = num_frames
         self.num_outputs = num_outputs

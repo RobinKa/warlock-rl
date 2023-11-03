@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from warlock_rl.envs import MAX_TIME, OBS_LOC_SCALE, WarlockEnv, state_to_obs
+from warlock_rl.envs import MAX_TIME, WarlockEnv, state_to_obs
 
 
 @pytest.fixture

@@ -182,7 +182,7 @@ algo = (
 
             "custom_model": "frame_stack_model",
             "custom_model_config": {
-                "num_frames": 4,
+                "num_frames": 16,
             },
             #"vf_share_layers": True,
         },
