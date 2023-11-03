@@ -26,12 +26,12 @@ index_to_entity_id = {
 
 ABILITY_IDS = [
     "shoot",
-    "scourge",
     "teleport",
     "swap",
-    "cluster",
+    "scourge",
     "homing",
     "shield",
+    "cluster",
     "gravity",
     "link",
     "boomerang",
@@ -279,6 +279,7 @@ def action_to_order(
         target["e1"] += enemy_location["e1"]
         target["e2"] += enemy_location["e2"]
 
+    # This needs to be in the same order as the action mask!
     match action_type:
         case 0:
             return None
