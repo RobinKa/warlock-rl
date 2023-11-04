@@ -30,6 +30,12 @@ export function getAbilityDefaults(): AbilitiesComponent {
       cooldown: 16,
       castTime: 0.2,
     },
+    lightning: {
+      id: "lightning",
+      target: "point",
+      cooldown: 16.5,
+      castTime: 0.2,
+    },
     scourge: {
       id: "scourge",
       target: "none",

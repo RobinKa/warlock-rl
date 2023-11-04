@@ -8,6 +8,7 @@ import { clusterDefinition } from "./cluster";
 import { AbilityDefinition } from "./definition";
 import { gravityDefinition } from "./gravity";
 import { homingDefinition } from "./homing";
+import { lightningDefinition } from "./lightning";
 import { linkDefinition } from "./link";
 import { scourgeDefinition } from "./scourge";
 import { shieldDefinition } from "./shield";
@@ -29,6 +30,7 @@ const definitions: AbilityDefinition[] = [
   shootDefinition,
   clusterDefinition,
   teleportDefinition,
+  lightningDefinition,
 ];
 
 const definitionsById: Record<AbilityId, AbilityDefinition> =

@@ -177,6 +177,7 @@ function startGame(replay?: GameComponent[]) {
     "s",
     "x",
     "q",
+    "w",
   ]);
   function handleInput() {
     const { x, y } = mousePosition;
@@ -208,6 +209,12 @@ function startGame(replay?: GameComponent[]) {
       components.orders[localPlayerId].order = {
         type: "useAbility",
         abilityId: "boomerang",
+        target: { e1: x, e2: y },
+      };
+    } else if (keyStates["w"]) {
+      components.orders[localPlayerId].order = {
+        type: "useAbility",
+        abilityId: "lightning",
         target: { e1: x, e2: y },
       };
     } else if (keyStates["c"]) {

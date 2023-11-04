@@ -24,6 +24,11 @@ export type AbilityBoomerang = {
   target: "point";
 };
 
+export type AbilityLightning = {
+  id: "lightning";
+  target: "point";
+};
+
 export type AbilityTeleport = {
   id: "teleport";
   target: "point";
@@ -60,6 +65,7 @@ export type Ability = AbilityCommon &
     | AbilityShoot
     | AbilityHoming
     | AbilityBoomerang
+    | AbilityLightning
     | AbilityTeleport
     | AbilityCluster
     | AbilitySwap
