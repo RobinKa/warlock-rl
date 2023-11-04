@@ -1,6 +1,6 @@
 import * as pga from "@/common/ga_zpp";
 import { GameComponent } from "@/gameplay/components";
-import { dealDamage } from "@/gameplay/damage";
+import { dealDamage } from "@/gameplay/utils/damage";
 
 export const lavaSystem = (components: GameComponent) => {
   const { healths, bodies, units, arena, gameState } = components;

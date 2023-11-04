@@ -1,8 +1,8 @@
 import * as pga from "@/common/ga_zpp";
 import { getDistanceSquared, normalized, reflect } from "@/common/mathutils";
-import { dealDamage } from "@/gameplay/damage";
-import { createProjectile } from "@/gameplay/projectile";
-import { areEnemies } from "@/gameplay/team";
+import { dealDamage } from "@/gameplay/utils/damage";
+import { createProjectile } from "@/gameplay/utils/projectile";
+import { areEnemies } from "@/gameplay/utils/team";
 import { AbilityDefinition } from "./definition";
 
 export const boomerangDefinition: AbilityDefinition = {

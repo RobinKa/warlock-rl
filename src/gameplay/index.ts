@@ -1,8 +1,8 @@
-import { getAbilityDefaults } from "./abilities";
-import { getDefaultArena } from "./arena";
+import { getAbilityDefaults } from "./utils/abilities";
+import { getDefaultArena } from "./utils/arena";
 import { GameComponent } from "./components";
 import { AbilityId } from "./components/abilities";
-import { randomFloat } from "./random";
+import { randomFloat } from "./utils/random";
 import { gameSystem } from "./systems";
 
 export type MakeGameOptions = {

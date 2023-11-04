@@ -1,7 +1,7 @@
 import * as pga from "@/common/ga_zpp";
 import { reflect } from "@/common/mathutils";
 import { GameComponent } from "@/gameplay/components";
-import { areEnemies } from "../../team";
+import { areEnemies } from "../../utils/team";
 import { AbilityDefinition } from "./definition";
 
 export const shieldDefinition: AbilityDefinition = {

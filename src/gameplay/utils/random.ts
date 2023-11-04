@@ -1,4 +1,4 @@
-import { GameComponent } from "./components";
+import { GameComponent } from "../components";
 
 export function randomInt({ gameState }: GameComponent) {
   let t = (gameState.randomState += 0x6d2b79f5);

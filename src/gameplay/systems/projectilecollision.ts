@@ -1,7 +1,7 @@
 import * as pga from "@/common/ga_zpp";
 import { GameComponent } from "@/gameplay/components";
-import { dealDamage } from "@/gameplay/damage";
-import { areEnemies } from "../team";
+import { dealDamage } from "@/gameplay/utils/damage";
+import { areEnemies } from "../utils/team";
 
 export function projectileCollisionSystem(components: GameComponent) {
   const { detectedCollisions, projectiles, lifetimes } = components;

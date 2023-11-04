@@ -1,4 +1,4 @@
-import { getAbilityDefaults } from "@/gameplay/abilities";
+import { getAbilityDefaults } from "@/gameplay/utils/abilities";
 import { GameComponent } from "@/gameplay/components";
 
 export function shopSystem({ shops, abilities, gameState }: GameComponent) {

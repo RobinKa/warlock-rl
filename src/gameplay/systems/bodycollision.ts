@@ -1,6 +1,6 @@
 import * as pga from "@/common/ga_zpp";
 import { GameComponent } from "@/gameplay/components";
-import { addImpulse } from "../physics";
+import { addImpulse } from "../utils/physics";
 
 export function bodyCollisionSystem(components: GameComponent) {
   const { detectedCollisions, bodies, units } = components;

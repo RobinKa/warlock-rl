@@ -6,7 +6,7 @@ import * as PIXI from "pixi.js";
 import { useKeyboard } from "@/common/keyboard";
 import { makeGame } from "@/gameplay";
 import { GameComponent } from "@/gameplay/components";
-import { buyAbility } from "@/gameplay/shop";
+import { buyAbility } from "@/gameplay/utils/shop";
 import { gameSystem } from "@/gameplay/systems";
 import { useCooldownWidget } from "./widgets/cooldown";
 import { useShopWidget } from "./widgets/shop";

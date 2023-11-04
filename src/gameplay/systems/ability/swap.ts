@@ -1,6 +1,6 @@
 import { GameComponent } from "@/gameplay/components";
 import { ProjectileComponent } from "@/gameplay/components/projectile";
-import { createProjectile } from "@/gameplay/projectile";
+import { createProjectile } from "@/gameplay/utils/projectile";
 import { AbilityDefinition } from "./definition";
 
 type SwapProjectile = ProjectileComponent & {

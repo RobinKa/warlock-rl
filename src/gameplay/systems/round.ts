@@ -1,7 +1,7 @@
 import { GameComponent } from "@/gameplay/components";
-import { randomFloat } from "@/gameplay/random";
-import { getDefaultArena } from "../arena";
-import { getLivingPlayerIds } from "../player";
+import { randomFloat } from "@/gameplay/utils/random";
+import { getDefaultArena } from "../utils/arena";
+import { getLivingPlayerIds } from "../utils/player";
 
 function resetGame(components: GameComponent) {
   const {

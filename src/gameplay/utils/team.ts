@@ -1,5 +1,5 @@
 import { EntityComponents } from "@/common/components";
-import { PlayerOwnedComponent } from "./components/playerowned";
+import { PlayerOwnedComponent } from "../components/playerowned";
 
 export function areEnemies(
   idA: number,

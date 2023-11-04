@@ -1,6 +1,6 @@
 import * as pga from "@/common/ga_zpp";
 import { GameComponent } from "@/gameplay/components";
-import { createProjectile } from "@/gameplay/projectile";
+import { createProjectile } from "@/gameplay/utils/projectile";
 import { AbilityDefinition } from "./definition";
 
 export const homingDefinition: AbilityDefinition = {

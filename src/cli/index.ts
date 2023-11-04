@@ -1,7 +1,7 @@
 import { makeGame } from "@/gameplay";
 import { AbilityId } from "@/gameplay/components/abilities";
 import { Order } from "@/gameplay/components/order";
-import { buyAbility } from "@/gameplay/shop";
+import { buyAbility } from "@/gameplay/utils/shop";
 
 let game: ReturnType<typeof makeGame> | undefined = undefined;
 

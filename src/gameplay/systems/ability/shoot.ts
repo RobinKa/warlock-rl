@@ -1,4 +1,4 @@
-import { createProjectile } from "@/gameplay/projectile";
+import { createProjectile } from "@/gameplay/utils/projectile";
 import { AbilityDefinition } from "./definition";
 
 export const shootDefinition: AbilityDefinition = {

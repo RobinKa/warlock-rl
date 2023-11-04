@@ -1,7 +1,7 @@
 import * as pga from "@/common/ga_zpp";
 import { normalized, rotate } from "@/common/mathutils";
-import { dealDamage } from "@/gameplay/damage";
-import { areEnemies } from "@/gameplay/team";
+import { dealDamage } from "@/gameplay/utils/damage";
+import { areEnemies } from "@/gameplay/utils/team";
 import { AbilityDefinition } from "./definition";
 
 const range = 600;

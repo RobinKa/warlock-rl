@@ -1,7 +1,7 @@
 import * as pga from "@/common/ga_zpp";
-import { dealDamage } from "@/gameplay/damage";
-import { createProjectile } from "@/gameplay/projectile";
-import { areEnemies } from "@/gameplay/team";
+import { dealDamage } from "@/gameplay/utils/damage";
+import { createProjectile } from "@/gameplay/utils/projectile";
+import { areEnemies } from "@/gameplay/utils/team";
 import { AbilityDefinition } from "./definition";
 
 const MAX_RANGE_SQ_PLAYER = Math.pow(550, 2);
