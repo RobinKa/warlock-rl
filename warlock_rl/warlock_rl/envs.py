@@ -6,6 +6,7 @@ from ray.rllib.env.multi_agent_env import MultiAgentEnv
 
 from warlock_rl.game import Game
 
+FRAMES_PER_STEP = 6
 OBS_LOC_RANGE = 2_000
 OBS_RELATIVE_LOC_RANGE = 500
 OBS_VELOCITY_RANGE = 4000
@@ -204,13 +205,15 @@ def state_to_action_mask(state: dict, self_player_index: int) -> np.ndarray:
         )
         return game_time >= ready_time
 
-    action_mask = (
-        [1] * 3  # nothing, stop, move
-        + [
+    casting = 1 if state["units"][self_entity_id]["state"]["type"] == "casting" else 0
+    # First 3 are nothing, stop, move
+    if casting:
+        action_mask = [1, 1, 0] + [0] * len(ABILITY_IDS)
+    else:
+        action_mask = [1] * 3 + [
             1 if can_use_ability(self_entity_id, ability_id) else 0
             for ability_id in ABILITY_IDS
         ]  # abilities
-    )
 
     action_mask = np.array(action_mask, np.int8)
 
@@ -571,7 +574,7 @@ class WarlockEnv(MultiAgentEnv):
 
             # Advance the game, check for termination on every frame
             terminated = False
-            for _ in range(6):
+            for _ in range(FRAMES_PER_STEP):
                 self._game.step(steps=1)
                 new_state = self._game.state
 
