@@ -28,7 +28,7 @@ class TorchFrameStackingModel(TorchModelV2, nn.Module):
 
         # Construct actual (very simple) FC model.
         assert len(obs_space.shape) == 1
-        in_size = self.num_frames * obs_space.shape[0]
+        in_size = self.num_frames + obs_space.shape[0]
 
         hidden_initializer = normc_initializer(1)
         output_initializer = normc_initializer(0.01)
@@ -73,11 +73,27 @@ class TorchFrameStackingModel(TorchModelV2, nn.Module):
         obs = input_dict["prev_n_obs"]
         action_mask = input_dict["obs"]["action_mask"]
 
-        obs = torch.reshape(obs, [-1, self.obs_space.shape[0] * self.num_frames])
+        # [..., F, X]
+        obs = torch.reshape(obs, [-1, self.num_frames, self.obs_space.shape[0]])
+
+        # [..., F, F]
+        frame_indices = torch.tile(
+            torch.eye(self.num_frames),
+            [*obs.shape[:-2], 1, 1],
+        )
+
+        # [..., F, X + F]
+        obs = torch.concat([obs, frame_indices], dim=-1)
+
         self._last_obs = obs
 
         features = self.layer1(obs)
+
+        # [..., F, O]
         out = self.out(features)
+
+        # [..., O]
+        out = torch.mean(out, -2)
 
         inf_mask = torch.clamp(torch.log(action_mask), min=FLOAT_MIN)
 
@@ -89,4 +105,6 @@ class TorchFrameStackingModel(TorchModelV2, nn.Module):
         return out, []
 
     def value_function(self):
-        return torch.squeeze(self.values(self.value_layer1(self._last_obs)), -1)
+        return torch.squeeze(
+            torch.mean(self.values(self.value_layer1(self._last_obs)), -2), -1
+        )
