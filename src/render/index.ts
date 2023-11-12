@@ -389,7 +389,18 @@ function startGame(replay?: GameComponent[]) {
           container.addChild(knockbackMultiplier);
         }
 
-        if (["1000", "1001"].includes(entityId)) {
+        if (
+          [
+            "1000",
+            "1001",
+            "1002",
+            "1003",
+            "1004",
+            "1005",
+            "1006",
+            "1007",
+          ].includes(entityId)
+        ) {
           const playerName = new PIXI.Text(parseInt(entityId) - 1000, {
             fontSize: 24,
           });

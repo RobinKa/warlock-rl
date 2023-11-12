@@ -6,6 +6,7 @@ from ray.rllib.env.multi_agent_env import MultiAgentEnv
 
 from warlock_rl.game import Game
 
+NUM_PLAYERS = 8
 FRAMES_PER_STEP = 6
 OBS_LOC_RANGE = 2_000
 OBS_RELATIVE_LOC_RANGE = 500
@@ -19,12 +20,8 @@ MAX_ARENA_RADIUS = 32 * 15
 START_GOLD_RANGE = (10, 80)
 SHOP_FRAMES = 5
 
-index_to_entity_id = {
-    0: "1000",
-    1: "1001",
-    "shop_0": "1000",
-    "shop_1": "1001",
-}
+index_to_entity_id = {i: str(i + 1000) for i in range(NUM_PLAYERS)}
+index_to_entity_id.update({f"shop_{i}": str(i + 1000) for i in range(NUM_PLAYERS)})
 
 ABILITY_IDS = [
     "shoot",
@@ -42,11 +39,8 @@ ABILITY_IDS = [
 
 
 # TODO: make work for arbitrary number of players
-def state_to_obs(
-    state: dict, self_player_index: int, other_player_index: int
-) -> np.ndarray:
+def state_to_obs(state: dict, self_player_index: int) -> np.ndarray:
     self_entity_id = index_to_entity_id[self_player_index]
-    other_entity_id = index_to_entity_id[other_player_index]
 
     def get_ability_relative_cooldown(entity_id: str, ability_id: str) -> float:
         if ability_id not in state["abilities"][entity_id]:
@@ -160,13 +154,15 @@ def state_to_obs(
 
     arena_radius = state["arena"]["radius"]
 
-    observations = (
-        [
-            arena_radius / MAX_ARENA_RADIUS,
-        ]
-        + get_player_observations(self_entity_id)
-        + get_player_observations(other_entity_id)
-    )
+    observations = [
+        arena_radius / MAX_ARENA_RADIUS,
+    ] + get_player_observations(self_entity_id)
+
+    other_player_indices = list(range(NUM_PLAYERS))
+    other_player_indices.remove(self_player_index)
+    for other_player_index in other_player_indices:
+        observations += get_player_observations(index_to_entity_id[other_player_index])
+
     for projectile_ob in projectile_obs:
         observations += projectile_ob
 
@@ -224,9 +220,7 @@ def state_to_action_mask(state: dict, self_player_index: int) -> np.ndarray:
     return action_mask
 
 
-def state_to_shop_obs(
-    state: dict, self_player_index: int, other_player_index: int
-) -> np.ndarray:
+def state_to_shop_obs(state: dict, self_player_index: int) -> np.ndarray:
     # TODO: Add opponent stuff
     self_entity_id = index_to_entity_id[self_player_index]
 
@@ -288,18 +282,19 @@ def action_to_order(
 
     # Add enemy location to target.
     # Also make the offset much smaller.
-    move_is_target_offset_from_enemy = action["move_target_type"] == 1
-    cast_is_target_offset_from_enemy = action["cast_target_type"] == 1
-    if (move_is_target_offset_from_enemy and action_type == 2) or (
-        cast_is_target_offset_from_enemy and action_type != 2
-    ):
-        enemy_index = 1 - player_index  # TODO
-        enemy_entity_id = index_to_entity_id[enemy_index]
-        enemy_location = state["bodies"][enemy_entity_id]["location"]
-        target["e1"] * 0.2
-        target["e2"] * 0.2
-        target["e1"] += enemy_location["e1"]
-        target["e2"] += enemy_location["e2"]
+    # TODO: Make this work for multiple enemies
+    # move_is_target_offset_from_enemy = action["move_target_type"] == 1
+    # cast_is_target_offset_from_enemy = action["cast_target_type"] == 1
+    # if (move_is_target_offset_from_enemy and action_type == 2) or (
+    #     cast_is_target_offset_from_enemy and action_type != 2
+    # ):
+    #     enemy_index = 1 - player_index  # TODO
+    #     enemy_entity_id = index_to_entity_id[enemy_index]
+    #     enemy_location = state["bodies"][enemy_entity_id]["location"]
+    #     target["e1"] * 0.2
+    #     target["e2"] * 0.2
+    #     target["e1"] += enemy_location["e1"]
+    #     target["e2"] += enemy_location["e2"]
 
     # This needs to be in the same order as the action mask!
     match action_type:
@@ -413,7 +408,7 @@ class WarlockEnv(MultiAgentEnv):
 
     round_num_obs = (
         1
-        + 2 * (PLAYER_OBS_SIZE + len(ABILITY_IDS))
+        + NUM_PLAYERS * (PLAYER_OBS_SIZE + len(ABILITY_IDS))
         + NUM_PROJECTILES * PROJECTILE_OBS_SIZE
     )
     action_mask_size = 3 + len(ABILITY_IDS)
@@ -449,13 +444,12 @@ class WarlockEnv(MultiAgentEnv):
     )
     # shop_observation_space = gym.spaces.Box(0, 1, (shop_num_obs,))
 
-    def __init__(self, *args, num_players: int = 2, **kwargs) -> None:
-        assert num_players == 2  # TODO: support different number of players
-
-        self._num_players = num_players
+    def __init__(self, *args, **kwargs) -> None:
+        self._num_players = NUM_PLAYERS
 
         self._agent_ids = set(
-            list(range(num_players)) + [f"shop_{i}" for i in range(num_players)]
+            list(range(self.num_players))
+            + [f"shop_{i}" for i in range(self.num_players)]
         )
 
         self._game = Game()
@@ -470,10 +464,9 @@ class WarlockEnv(MultiAgentEnv):
         assert not self.shopping
         return {
             i: {
-                "obs": state_to_obs(self._game.state, i, 1 - i),
+                "obs": state_to_obs(self._game.state, i),
                 "action_mask": state_to_action_mask(self._game.state, i),
             }
-            # i: state_to_obs(self._game.state, i, 1 - i)
             for i in range(self.num_players)
         }
 
@@ -481,10 +474,9 @@ class WarlockEnv(MultiAgentEnv):
         assert self.shopping
         return {
             f"shop_{i}": {
-                "obs": state_to_shop_obs(self._game.state, i, 1 - i),
+                "obs": state_to_shop_obs(self._game.state, i),
                 "action_mask": state_to_shop_action_mask(self._game.state, i),
             }
-            # f"shop_{i}": state_to_shop_obs(self._game.state, i, 1 - i)
             for i in range(self.num_players)
         }
 
@@ -532,7 +524,9 @@ class WarlockEnv(MultiAgentEnv):
         actions: dict[int | str, dict[str, int | Sequence[float]] | int],
     ) -> tuple[Any, SupportsFloat, bool, bool, dict[str, Any]]:
         if self.shopping:
-            assert set(actions.keys()) == {"shop_0", "shop_1"}
+            assert set(actions.keys()) == set(
+                f"shop_{i}" for i in range(self.num_players)
+            )
             # Buy abilities
             for shop_agent_id, action in actions.items():
                 if action != 0:
@@ -560,7 +554,7 @@ class WarlockEnv(MultiAgentEnv):
                 {},
             )
         else:
-            assert set(actions.keys()) == {0, 1}
+            assert set(actions.keys()) == set(range(self.num_players))
             # Set player orders
             # TODO: Do this in one batch call
             for player_index, action in actions.items():
