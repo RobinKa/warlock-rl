@@ -42,10 +42,10 @@ function canUseAbility(
 }
 
 export function orderSystem(components: GameComponent) {
-  const { orders, units, gameState } = components;
+  const { orders, units, healths, gameState } = components;
 
   for (const [entityId, order] of Object.entries(orders)) {
-    if (entityId in units) {
+    if (entityId in units && healths[entityId]?.current > 0) {
       if (order.order) {
         const unit = units[entityId];
 
