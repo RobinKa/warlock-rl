@@ -6,7 +6,7 @@ from ray.rllib.env.multi_agent_env import MultiAgentEnv
 
 from warlock_rl.game import Game
 
-NUM_PLAYERS = 8
+NUM_PLAYERS = 4
 FRAMES_PER_STEP = 6
 OBS_LOC_RANGE = 2_000
 OBS_RELATIVE_LOC_RANGE = 500
@@ -462,12 +462,14 @@ class WarlockEnv(MultiAgentEnv):
 
     def _make_round_obs(self):
         assert not self.shopping
+
         return {
             i: {
                 "obs": state_to_obs(self._game.state, i),
                 "action_mask": state_to_action_mask(self._game.state, i),
             }
             for i in range(self.num_players)
+            if self._game.state["healths"][index_to_entity_id[i]]["current"] > 0
         }
 
     def _make_shop_obs(self):
@@ -554,7 +556,7 @@ class WarlockEnv(MultiAgentEnv):
                 {},
             )
         else:
-            assert set(actions.keys()) == set(range(self.num_players))
+            #assert set(actions.keys()) == set(range(self.num_players))
             # Set player orders
             # TODO: Do this in one batch call
             for player_index, action in actions.items():
@@ -586,6 +588,7 @@ class WarlockEnv(MultiAgentEnv):
             rewards = {
                 i: 1 if int(index_to_entity_id[i]) in winners else 0
                 for i in range(self.num_players)
+                if i in actions
             }
             for k, v in rewards.copy().items():
                 rewards[f"shop_{k}"] = v
