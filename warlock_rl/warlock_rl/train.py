@@ -16,9 +16,10 @@ from ray.tune import CLIReporter
 
 from warlock_rl.envs import MAX_ROUNDS, WarlockEnv
 from warlock_rl.models import TorchFrameStackingModel
+from warlock_rl.agent_league import AgentLeague
 
 WIN_RATE_THRESHOLD = 0.95
-RANDOM_SHOP = False
+RANDOM_SHOP = True
 
 ModelCatalog.register_custom_model(
     "frame_stack_model",
@@ -34,7 +35,12 @@ class SelfPlayCallback(DefaultCallbacks):
         self.current_opponent = 0
         self.last_changed_iter = 0
 
+    def on_algorithm_init(self, *, algorithm: Algorithm, **kwargs):
+        print("on_algorithm_init")
+        self.league = AgentLeague(1, algorithm)
+
     def on_train_result(self, *, algorithm, result, **kwargs):
+        return
         result["league_size"] = self.current_opponent + 2
 
         win_rate = (
@@ -46,6 +52,7 @@ class SelfPlayCallback(DefaultCallbacks):
     def on_evaluate_end(
         self, *, algorithm: Algorithm, evaluation_metrics: dict, **kwargs
     ):
+        return
         result = evaluation_metrics["evaluation"]
         win_rate = result["sampler_results"]["policy_reward_mean"]["main"] / MAX_ROUNDS
         print(f"Evaluation Iter={algorithm.iteration} win-rate={win_rate} -> ", end="")
@@ -141,11 +148,11 @@ class SelfPlayCallback(DefaultCallbacks):
 
 def policy_mapping_fn(agent_id, episode, worker, **kwargs):
     if isinstance(agent_id, int):
-        return "main" if agent_id == 0 else "random"
-    return "main_shop" if agent_id == "shop_0" else "random_shop"
+        return "random"
+    return "random_shop"
 
 
-algo = (
+config = (
     PPOConfig()
     # .framework(
     #     "torch",
@@ -156,9 +163,10 @@ algo = (
     #     torch_compile_learner_dynamo_backend="inductor",
     #     torch_compile_learner_dynamo_mode="default",
     # )
+    .callbacks(SelfPlayCallback)
     .rollouts(
-        num_rollout_workers=32,
-        num_envs_per_worker=2,
+        num_rollout_workers=1,
+        num_envs_per_worker=1,
         # rollout_fragment_length=512,
         rollout_fragment_length=44,
     )
@@ -166,10 +174,10 @@ algo = (
         # num_gpus=1,
         # num_gpus_per_learner_worker=1,
         # num_gpus_per_worker=0.03,
-        num_cpus_per_worker=0.95,
+        num_cpus_per_worker=0.9,
     )
     .training(
-        gamma = 1.0,
+        gamma=1.0,
         _enable_learner_api=False,
         # clip_param=0.1,
         model={
@@ -179,17 +187,15 @@ algo = (
             # "use_lstm": True,
             # "lstm_cell_size": 64,
             # "max_seq_len": 16,
-
             "custom_model": "frame_stack_model",
             "custom_model_config": {
-                "num_frames": 16,
+                "num_frames": 4,
             },
-            #"vf_share_layers": True,
+            # "vf_share_layers": True,
         },
-        sgd_minibatch_size=64,
-        train_batch_size=44 * 32 * 2,
+        sgd_minibatch_size=32,
+        train_batch_size=44 * 16 * 2,
         num_sgd_iter=4,
-
         # train_batch_size=32768,
         # sgd_minibatch_size=32768,
         # lr=5e-4,
@@ -197,26 +203,11 @@ algo = (
         # lr_schedule=[[0, 8e-5], [20_000, 4e-5], [1_200_000, 3e-5]],
     )
     .evaluation(
-        # evaluation_interval=200,
         evaluation_interval=50,
         evaluation_duration=10,
-        # evaluation_parallel_to_training=True,
-        # evaluation_num_workers=4,
     )
     .multi_agent(
         policies={
-            "main": PolicySpec(
-                action_space=WarlockEnv.round_action_space,
-                observation_space=WarlockEnv.round_observation_space,
-            ),
-            "main_shop": PolicySpec(
-                policy_class=RandomPolicy,
-                action_space=WarlockEnv.shop_action_space,
-                observation_space=WarlockEnv.shop_observation_space,
-            ) if RANDOM_SHOP else PolicySpec(
-                action_space=WarlockEnv.shop_action_space,
-                observation_space=WarlockEnv.shop_observation_space,
-            ),
             "random": PolicySpec(
                 policy_class=RandomPolicy,
                 action_space=WarlockEnv.round_action_space,
@@ -229,24 +220,12 @@ algo = (
             ),
         },
         policy_mapping_fn=policy_mapping_fn,
-        policies_to_train=["main"] + ([] if RANDOM_SHOP else ["main_shop"]),
+        policies_to_train=[],
     )
     .rl_module(
         _enable_rl_module_api=False,
         rl_module_spec=MultiAgentRLModuleSpec(
             module_specs={
-                "main": SingleAgentRLModuleSpec(
-                    action_space=WarlockEnv.round_action_space,
-                    observation_space=WarlockEnv.round_observation_space,
-                ),
-                "main_shop": SingleAgentRLModuleSpec(
-                    module_class=RandomRLModule,
-                    action_space=WarlockEnv.shop_action_space,
-                    observation_space=WarlockEnv.shop_observation_space,
-                ) if RANDOM_SHOP else SingleAgentRLModuleSpec(
-                    action_space=WarlockEnv.shop_action_space,
-                    observation_space=WarlockEnv.shop_observation_space,
-                ),
                 "random": SingleAgentRLModuleSpec(
                     module_class=RandomRLModule,
                     action_space=WarlockEnv.round_action_space,
@@ -260,7 +239,7 @@ algo = (
             }
         ),
     )
-    .callbacks(SelfPlayCallback)
+    # .callbacks(SelfPlayCallback)
     .environment(
         env=WarlockEnv,
         disable_env_checking=True,  # fails with multiagent
@@ -270,18 +249,18 @@ algo = (
 # algo = Algorithm.from_checkpoint("/tmp/tmpy010_u6o")
 
 callbacks = []
-if wandb_api_key := os.environ.get("WANDB_API_KEY"):
-    callbacks.append(
-        WandbLoggerCallback(
-            api_key=wandb_api_key,
-            project="warlock-rl",
-            log_config=True,
-        )
-    )
+# if wandb_api_key := os.environ.get("WANDB_API_KEY"):
+#     callbacks.append(
+#         WandbLoggerCallback(
+#             api_key=wandb_api_key,
+#             project="warlock-rl",
+#             log_config=True,
+#         )
+#     )
 
 results = tune.Tuner(
     "PPO",
-    param_space=algo,
+    param_space=config,
     run_config=air.RunConfig(
         # stop=stop,
         callbacks=callbacks,
