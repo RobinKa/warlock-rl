@@ -78,7 +78,7 @@ class TorchFrameStackingModel(TorchModelV2, nn.Module):
 
         # [..., F, F]
         frame_indices = torch.tile(
-            torch.eye(self.num_frames),
+            torch.eye(self.num_frames, device=obs.device),
             [*obs.shape[:-2], 1, 1],
         )
 
