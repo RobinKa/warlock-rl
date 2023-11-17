@@ -6,7 +6,7 @@ from ray.rllib.env.multi_agent_env import MultiAgentEnv
 
 from warlock_rl.game import Game
 
-NUM_PLAYERS = 4
+NUM_PLAYERS = 2
 FRAMES_PER_STEP = 6
 OBS_LOC_RANGE = 2_000
 OBS_RELATIVE_LOC_RANGE = 500

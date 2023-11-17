@@ -41,8 +41,11 @@ class AgentLeague:
 
         for _ in range(num_main):
             main_id = self.add_main()
-            self.add_clone(main_id)
             self.add_exploiter(main_id)
+
+    @property
+    def agents(self):
+        return self._agents
 
     def _get_next_policy_id(self):
         next_id = self._next_policy_id
@@ -126,6 +129,7 @@ class AgentLeague:
             worker.set_is_policy_to_train(policies_to_train)
 
         self._algorithm.workers.foreach_worker(update_worker)
+        self._algorithm.evaluation_workers.foreach_worker(update_worker)
 
     def get_policy_mapping_fn(self):
         agents = self._agents
@@ -145,22 +149,26 @@ class AgentLeague:
             rng = np.random.default_rng(seed=(episode.episode_id, agent_id))
 
             if isinstance(trainable_agent, LeagueAgentMain):
-                # Play against any frozen main agent
+                # Play against any frozen or main agent
+                choices = [
+                    i
+                    for i, agent in agents.items()
+                    if isinstance(agent, LeagueAgentClone)
+                    or isinstance(agent, LeagueAgentMain)
+                ]
+                if not choices:
+                    return "random"
+                return rng.choice(choices)
+            elif isinstance(trainable_agent, LeagueAgentExploiter):
+                # Play against any non-frozen main agent of the target id
                 return rng.choice(
                     [
                         i
                         for i, agent in agents.items()
-                        if isinstance(agent, LeagueAgentClone)
-                    ]
-                )
-            elif isinstance(trainable_agent, LeagueAgentExploiter):
-                # Play against any frozen main agent of the target id
-                return rng.choice(
-                    choices=[
-                        i
-                        for i, agent in agents.items()
-                        if isinstance(agent, LeagueAgentClone)
-                        and agent.parent_id == trainable_agent.target_id
+                        if (
+                            isinstance(agent, LeagueAgentMain)
+                            and agent.id == trainable_agent.target_id
+                        )
                     ]
                 )
 

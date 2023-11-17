@@ -14,9 +14,9 @@ from ray.rllib.models.catalog import ModelCatalog
 from ray.rllib.policy.policy import PolicySpec
 from ray.tune import CLIReporter
 
+from warlock_rl.agent_league import AgentLeague, LeagueAgentExploiter, LeagueAgentMain
 from warlock_rl.envs import MAX_ROUNDS, WarlockEnv
 from warlock_rl.models import TorchFrameStackingModel
-from warlock_rl.agent_league import AgentLeague
 
 WIN_RATE_THRESHOLD = 0.95
 RANDOM_SHOP = True
@@ -28,122 +28,37 @@ ModelCatalog.register_custom_model(
 
 
 class SelfPlayCallback(DefaultCallbacks):
-    def __init__(self):
-        super().__init__()
-        # 0=RandomPolicy, 1=1st main policy snapshot,
-        # 2=2nd main policy snapshot, etc..
-        self.current_opponent = 0
-        self.last_changed_iter = 0
-
     def on_algorithm_init(self, *, algorithm: Algorithm, **kwargs):
         print("on_algorithm_init")
-        self.league = AgentLeague(1, algorithm)
+        self.league = AgentLeague(3, algorithm)
 
     def on_train_result(self, *, algorithm, result, **kwargs):
-        return
-        result["league_size"] = self.current_opponent + 2
-
-        win_rate = (
-            result["sampler_results"]["policy_reward_mean"].get("main", -1) / MAX_ROUNDS
-        )
-        result["win_rate"] = win_rate
-        print(f"Iter={algorithm.iteration} win-rate={win_rate}")
+        print(f"on_train_result {algorithm.iteration=}")
+        for agent in self.league.agents.values():
+            if agent.id not in result["sampler_results"]["policy_reward_mean"]:
+                print("Skipping", agent)
+                continue
+            win_rate = (
+                result["sampler_results"]["policy_reward_mean"][agent.id] / MAX_ROUNDS
+            )
+            print(f"[{algorithm.iteration=}, {agent}] training {win_rate=}")
 
     def on_evaluate_end(
         self, *, algorithm: Algorithm, evaluation_metrics: dict, **kwargs
     ):
-        return
-        result = evaluation_metrics["evaluation"]
-        win_rate = result["sampler_results"]["policy_reward_mean"]["main"] / MAX_ROUNDS
-        print(f"Evaluation Iter={algorithm.iteration} win-rate={win_rate} -> ", end="")
+        trainable_agents = {k: v for k, v in self.league.agents.items() if v.trainable}
 
-        # If win rate is good -> Snapshot current policy and play against
-        # it next, keeping the snapshot fixed and only improving the "main"
-        # policy.
-        if win_rate >= WIN_RATE_THRESHOLD and (
-            self.last_changed_iter is None
-            or algorithm.iteration > self.last_changed_iter + 5
-        ):
-            self.last_changed_iter = algorithm.iteration
-            self.current_opponent += 1
-            new_pol_id = f"main_v{self.current_opponent}"
-            print(f"adding new opponent to the mix ({new_pol_id}).")
-
-            # Re-define the mapping function, such that "main" is forced
-            # to play against any of the previously played policies
-            # (excluding "random").
-            def policy_mapping_fn(agent_id, episode, worker, **kwargs):
-                if isinstance(agent_id, int):
-                    return (
-                        "main"
-                        if agent_id == 0
-                        else "main_v{}".format(
-                            np.random.choice(list(range(1, self.current_opponent + 1)))
-                        )
-                    )
-                return (
-                    "main_shop"
-                    if agent_id == "shop_0" or RANDOM_SHOP
-                    else "main_v{}_shop".format(
-                        np.random.choice(list(range(1, self.current_opponent + 1)))
-                    )
-                )
-
-            main_policy = algorithm.get_policy("main")
-            main_shop_policy = algorithm.get_policy("main_shop")
-            if algorithm.config._enable_learner_api:
-                new_policy = algorithm.add_policy(
-                    policy_id=new_pol_id,
-                    policy_cls=type(main_policy),
-                    policy_mapping_fn=policy_mapping_fn,
-                    module_spec=SingleAgentRLModuleSpec.from_module(main_policy.model),
-                    action_space=WarlockEnv.round_action_space,
-                    observation_space=WarlockEnv.round_observation_space,
-                )
-                if not RANDOM_SHOP:
-                    new_shop_policy = algorithm.add_policy(
-                        policy_id=new_pol_id + "_shop",
-                        policy_cls=type(main_shop_policy),
-                        policy_mapping_fn=policy_mapping_fn,
-                        module_spec=SingleAgentRLModuleSpec.from_module(
-                            main_shop_policy.model
-                        ),
-                        action_space=WarlockEnv.shop_action_space,
-                        observation_space=WarlockEnv.shop_observation_space,
-                    )
-            else:
-                new_policy = algorithm.add_policy(
-                    policy_id=new_pol_id,
-                    policy_cls=type(main_policy),
-                    policy_mapping_fn=policy_mapping_fn,
-                    action_space=WarlockEnv.round_action_space,
-                    observation_space=WarlockEnv.round_observation_space,
-                )
-                if not RANDOM_SHOP:
-                    new_shop_policy = algorithm.add_policy(
-                        policy_id=new_pol_id + "_shop",
-                        policy_cls=type(main_shop_policy),
-                        policy_mapping_fn=policy_mapping_fn,
-                        action_space=WarlockEnv.shop_action_space,
-                        observation_space=WarlockEnv.shop_observation_space,
-                    )
-
-            # Set the weights of the new policy to the main policy.
-            # We'll keep training the main policy, whereas `new_pol_id` will
-            # remain fixed.
-            main_state = main_policy.get_state()
-            new_policy.set_state(main_state)
-            if not RANDOM_SHOP:
-                main_shop_state = main_shop_policy.get_state()
-                new_shop_policy.set_state(main_shop_state)
-            # We need to sync the just copied local weights (from main policy)
-            # to all the remote workers as well.
-            print("good enough; updating model ...")
-            algorithm.workers.sync_weights(timeout_seconds=10)
-            algorithm.evaluation_workers.sync_weights(timeout_seconds=10)
-            print("updated!")
-        else:
-            print("not good enough; will keep learning ...")
+        for agent in trainable_agents.values():
+            result = evaluation_metrics["evaluation"]
+            win_rate = (
+                result["sampler_results"]["policy_reward_mean"][agent.id] / MAX_ROUNDS
+            )
+            print(
+                f"[{algorithm.iteration=}, {agent=}]",
+                f"evaluation {win_rate=},",
+                "adding clone",
+            )
+            self.league.add_clone(agent.id)
 
 
 def policy_mapping_fn(agent_id, episode, worker, **kwargs):
@@ -165,7 +80,7 @@ config = (
     # )
     .callbacks(SelfPlayCallback)
     .rollouts(
-        num_rollout_workers=1,
+        num_rollout_workers=16,
         num_envs_per_worker=1,
         # rollout_fragment_length=512,
         rollout_fragment_length=44,
@@ -194,7 +109,7 @@ config = (
             # "vf_share_layers": True,
         },
         sgd_minibatch_size=32,
-        train_batch_size=44 * 16 * 2,
+        train_batch_size=44 * 16 * 1,
         num_sgd_iter=4,
         # train_batch_size=32768,
         # sgd_minibatch_size=32768,
@@ -203,8 +118,8 @@ config = (
         # lr_schedule=[[0, 8e-5], [20_000, 4e-5], [1_200_000, 3e-5]],
     )
     .evaluation(
-        evaluation_interval=50,
-        evaluation_duration=10,
+        evaluation_interval=100,
+        evaluation_duration=50,
     )
     .multi_agent(
         policies={
