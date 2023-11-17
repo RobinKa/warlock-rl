@@ -260,7 +260,6 @@ def state_to_shop_action_mask(state: dict, self_player_index: int) -> np.ndarray
 
     return action_mask
 
-
 def action_to_order(
     player_index: int, state: dict, action: dict[str, int | Sequence[float]]
 ) -> dict | None:
@@ -283,18 +282,19 @@ def action_to_order(
     # Add enemy location to target.
     # Also make the offset much smaller.
     # TODO: Make this work for multiple enemies
-    # move_is_target_offset_from_enemy = action["move_target_type"] == 1
-    # cast_is_target_offset_from_enemy = action["cast_target_type"] == 1
-    # if (move_is_target_offset_from_enemy and action_type == 2) or (
-    #     cast_is_target_offset_from_enemy and action_type != 2
-    # ):
-    #     enemy_index = 1 - player_index  # TODO
-    #     enemy_entity_id = index_to_entity_id[enemy_index]
-    #     enemy_location = state["bodies"][enemy_entity_id]["location"]
-    #     target["e1"] * 0.2
-    #     target["e2"] * 0.2
-    #     target["e1"] += enemy_location["e1"]
-    #     target["e2"] += enemy_location["e2"]
+    if NUM_PLAYERS == 2:
+        move_is_target_offset_from_enemy = action["move_target_type"] == 1
+        cast_is_target_offset_from_enemy = action["cast_target_type"] == 1
+        if (move_is_target_offset_from_enemy and action_type == 2) or (
+            cast_is_target_offset_from_enemy and action_type != 2
+        ):
+            enemy_index = 1 - player_index  # TODO
+            enemy_entity_id = index_to_entity_id[enemy_index]
+            enemy_location = state["bodies"][enemy_entity_id]["location"]
+            target["e1"] * 0.2
+            target["e2"] * 0.2
+            target["e1"] += enemy_location["e1"]
+            target["e2"] += enemy_location["e2"]
 
     # This needs to be in the same order as the action mask!
     match action_type:
